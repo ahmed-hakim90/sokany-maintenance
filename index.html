@@ -4,286 +4,443 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة المخزون متعدد المراكز</title>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        
         body {
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             margin: 0;
             padding: 20px;
             color: #333;
+            min-height: 100vh;
         }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background-color: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
+        
         h1, h2 {
             color: #2c3e50;
             text-align: center;
+            margin-bottom: 20px;
         }
+        
+        h1 {
+            padding: 15px;
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
         .section {
             margin-bottom: 30px;
             padding: 20px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
+        
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
+        
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
+            color: #2c3e50;
         }
+        
         input, select, button, textarea {
             width: 100%;
-            padding: 10px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-size: 16px;
         }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
         button {
-            background-color: #3498db;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
             border: none;
             cursor: pointer;
             font-weight: bold;
             margin-top: 10px;
+            transition: all 0.3s ease;
+            padding: 14px;
         }
+        
         button:hover {
-            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+        
         button.export {
-            background-color: #27ae60;
+            background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
         }
-        button.export:hover {
-            background-color: #219653;
-        }
+        
         button.import {
-            background-color: #f39c12;
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
         }
-        button.import:hover {
-            background-color: #e67e22;
-        }
+        
         button.admin {
-            background-color: #9b59b6;
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
         }
-        button.admin:hover {
-            background-color: #8e44ad;
+        
+        button.delete {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
         }
+        
         th, td {
-            padding: 12px;
+            padding: 15px;
             text-align: right;
             border-bottom: 1px solid #ddd;
         }
+        
         th {
-            background-color: #f2f2f2;
-        }
-        .success {
-            color: green;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
             font-weight: bold;
         }
-        .error {
-            color: red;
-            font-weight: bold;
-        }
-        .inventory-summary {
+        
+        tr:nth-child(even) {
             background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+        }
+        
+        tr:hover {
+            background-color: #f1f9ff;
+        }
+        
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .inventory-summary {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            gap: 20px;
+            color: white;
         }
+        
         .summary-item {
             text-align: center;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
+        
         .summary-item h3 {
             margin: 0;
             font-size: 16px;
+            margin-bottom: 10px;
         }
+        
         .summary-item p {
-            margin: 5px 0 0;
-            font-size: 20px;
+            margin: 0;
+            font-size: 24px;
             font-weight: bold;
         }
+        
         .tabs {
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 2px solid #3498db;
+            flex-wrap: wrap;
         }
+        
         .tab {
-            padding: 10px 20px;
+            padding: 12px 25px;
             cursor: pointer;
             background-color: #f2f2f2;
             border: 1px solid #ddd;
             border-bottom: none;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
+            border-radius: 8px 8px 0 0;
+            margin-left: 5px;
+            transition: all 0.3s ease;
         }
+        
         .tab.active {
-            background-color: #3498db;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
         }
+        
         .tab-content {
             display: none;
         }
+        
         .tab-content.active {
             display: block;
+            animation: fadeIn 0.5s;
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
         .maintenance-status {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
         }
+        
         .status-waiting-part {
             background-color: #ffeaa7;
             color: #d35400;
         }
+        
         .status-waiting-technician {
             background-color: #81ecec;
             color: #00b894;
         }
+        
         .status-completed {
             background-color: #55efc4;
             color: #00b894;
         }
+        
         .status-waiting-customer {
             background-color: #fab1a0;
             color: #e17055;
         }
+        
         .action-buttons {
             display: flex;
             gap: 5px;
         }
+        
         .action-buttons button {
-            padding: 5px 10px;
-            font-size: 12px;
+            padding: 8px 12px;
+            font-size: 14px;
         }
+        
         .export-options {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
+        
         .export-options button {
             width: auto;
-            padding: 8px 15px;
+            padding: 12px 20px;
         }
+        
         .login-container {
             max-width: 500px;
             margin: 50px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .center-name {
-            background-color: #3498db;
-            color: white;
-            padding: 10px;
+            padding: 30px;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             text-align: center;
-            border-radius: 5px;
+        }
+        
+        .center-name {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
             margin-bottom: 20px;
             font-weight: bold;
+            font-size: 20px;
         }
+        
         .admin-dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
+        
         .admin-card {
             background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
+            padding: 20px;
+            border-radius: 10px;
             border: 1px solid #ddd;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
+        
         .center-select {
             margin-bottom: 20px;
         }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.success {
+            background-color: #27ae60;
+        }
+        
+        .notification.error {
+            background-color: #e74c3c;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                margin-bottom: 5px;
+                border-radius: 8px;
+                margin-left: 0;
+            }
+            
+            .inventory-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .export-options {
+                flex-direction: column;
+            }
+            
+            .export-options button {
+                width: 100%;
+            }
+        }
     </style>
-      <!-- ... الأكواد الأخرى ... -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Firebase App (الجزء الأساسي من Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
 </head>
 <body>
+    <div id="notification" class="notification"></div>
     
     <div id="login-page" class="login-container">
-        <h1>نظام إدارة المخزون متعدد المراكز</h1>
+        <h1><i class="fas fa-warehouse"></i> نظام إدارة المخزون متعدد المراكز</h1>
         <div class="form-group">
-            <label for="center-select">اختر المركز:</label>
+            <label for="center-select"><i class="fas fa-building"></i> اختر المركز:</label>
             <select id="center-select">
                 <option value="">-- اختر المركز --</option>
+                <option value="admin">لوحة المسؤول</option>
             </select>
         </div>
         <div class="form-group">
-            <label for="password">كلمة المرور:</label>
+            <label for="password"><i class="fas fa-lock"></i> كلمة المرور:</label>
             <input type="password" id="password" placeholder="أدخل كلمة المرور">
         </div>
-        <button onclick="login()">تسجيل الدخول</button>
+        <button onclick="login()"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
         <div style="margin-top: 20px; text-align: center;">
-            <p>للدخول كمسؤول، اختر "لوحة المسؤول" من القائمة وأدخل كلمة مرور المسؤول</p>
-            <button class="admin" onclick="showAdminLogin()">دخول المسؤول</button>
+            <p>كلمة مرور المركز الافتراضي (العاشر): 12345</p>
         </div>
     </div>
 
     <div id="app-container" class="container" style="display: none;">
-        <div id="center-header" class="center-name">اسم المركز</div>
+        <div id="center-header" class="center-name">المركز الرئيسي</div>
         
         <div class="inventory-summary">
             <div class="summary-item">
-                <h3>إجمالي الأصناف</h3>
+                <h3><i class="fas fa-boxes"></i> إجمالي الأصناف</h3>
                 <p id="total-items">0</p>
             </div>
             <div class="summary-item">
-                <h3>إجمالي الكمية</h3>
+                <h3><i class="fas fa-cubes"></i> إجمالي الكمية</h3>
                 <p id="total-quantity">0</p>
             </div>
             <div class="summary-item">
-                <h3>القيمة الإجمالية</h3>
+                <h3><i class="fas fa-money-bill-wave"></i> القيمة الإجمالية</h3>
                 <p id="total-value">0 جنيه</p>
             </div>
             <div class="summary-item">
-                <h3>عمليات البيع</h3>
+                <h3><i class="fas fa-shopping-cart"></i> عمليات البيع</h3>
                 <p id="total-sales">0</p>
             </div>
             <div class="summary-item">
-                <h3>طلبات الصيانة</h3>
+                <h3><i class="fas fa-tools"></i> طلبات الصيانة</h3>
                 <p id="total-maintenance">0</p>
             </div>
             <div class="summary-item">
-                <h3>قيمة المبيعات</h3>
+                <h3><i class="fas fa-chart-line"></i> قيمة المبيعات</h3>
                 <p id="total-sales-value">0 جنيه</p>
             </div>
         </div>
         
         <div class="tabs">
-            <div class="tab active" onclick="switchCenterDataTab('inventory-tab')">إدارة المخزون</div>
-            <div class="tab" onclick="switchCenterDataTab('sales-tab')">عمليات البيع</div>
-            <div class="tab" onclick="switchCenterDataTab('maintenance-tab')">طلبات الصيانة</div>
-            <div class="tab" onclick="switchCenterDataTab('export-tab')">التصدير والاستيراد</div>
-            <div class="tab" onclick="logout()">تسجيل الخروج</div>
+            <div class="tab active" onclick="switchTab('inventory-tab')"><i class="fas fa-box-open"></i> إدارة المخزون</div>
+            <div class="tab" onclick="switchTab('sales-tab')"><i class="fas fa-shopping-cart"></i> عمليات البيع</div>
+            <div class="tab" onclick="switchTab('maintenance-tab')"><i class="fas fa-tools"></i> طلبات الصيانة</div>
+            <div class="tab" onclick="switchTab('export-tab')"><i class="fas fa-file-export"></i> التصدير والاستيراد</div>
+            <div class="tab" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
         </div>
         
         <div id="inventory-tab" class="tab-content active">
             <div class="section">
-                <h2>إضافة صنف جديد</h2>
+                <h2><i class="fas fa-plus-circle"></i> إضافة صنف جديد</h2>
                 <div class="form-group">
                     <label for="item-name">اسم الصنف:</label>
                     <input type="text" id="item-name" placeholder="أدخل اسم الصنف">
@@ -300,11 +457,11 @@
                     <label for="item-note">ملاحظات:</label>
                     <textarea id="item-note" placeholder="أدخل أي ملاحظات حول الصنف"></textarea>
                 </div>
-                <button onclick="addNewItem()">إضافة صنف جديد</button>
+                <button onclick="addNewItem()"><i class="fas fa-plus"></i> إضافة صنف جديد</button>
             </div>
             
             <div class="section">
-                <h2>إضافة إلى المخزون</h2>
+                <h2><i class="fas fa-cart-plus"></i> إضافة إلى المخزون</h2>
                 <div class="form-group">
                     <label for="add-item">اختر الصنف:</label>
                     <select id="add-item">
@@ -319,11 +476,11 @@
                     <label for="add-note">ملاحظات:</label>
                     <textarea id="add-note" placeholder="أدخل أي ملاحظات حول الإضافة"></textarea>
                 </div>
-                <button onclick="addToInventory()">إضافة إلى المخزون</button>
+                <button onclick="addToInventory()"><i class="fas fa-plus"></i> إضافة إلى المخزون</button>
             </div>
             
             <div class="section">
-                <h2>قائمة الأصناف</h2>
+                <h2><i class="fas fa-list"></i> قائمة الأصناف</h2>
                 <table id="items-table">
                     <thead>
                         <tr>
@@ -335,7 +492,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- سيتم ملء هذا الجدول بالبيانات -->
                     </tbody>
                 </table>
             </div>
@@ -343,7 +499,7 @@
         
         <div id="sales-tab" class="tab-content">
             <div class="section">
-                <h2>تسجيل عملية بيع</h2>
+                <h2><i class="fas fa-cash-register"></i> تسجيل عملية بيع</h2>
                 <div class="form-group">
                     <label for="sale-item">اختر الصنف:</label>
                     <select id="sale-item">
@@ -362,11 +518,11 @@
                     <label for="customer-phone">رقم تليفون العميل:</label>
                     <input type="text" id="customer-phone" placeholder="أدخل رقم التليفون">
                 </div>
-                <button onclick="recordSale()">تسجيل البيع</button>
+                <button onclick="recordSale()"><i class="fas fa-check"></i> تسجيل البيع</button>
             </div>
             
             <div class="section">
-                <h2>سجل عمليات البيع</h2>
+                <h2><i class="fas fa-history"></i> سجل عمليات البيع</h2>
                 <table id="sales-table">
                     <thead>
                         <tr>
@@ -378,7 +534,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- سيتم ملء هذا الجدول بالبيانات -->
                     </tbody>
                 </table>
             </div>
@@ -386,7 +541,7 @@
         
         <div id="maintenance-tab" class="tab-content">
             <div class="section">
-                <h2>تسجيل عملية صيانة</h2>
+                <h2><i class="fas fa-tools"></i> تسجيل عملية صيانة</h2>
                 <div class="form-group">
                     <label for="maintenance-item">اختر الصنف:</label>
                     <select id="maintenance-item">
@@ -433,11 +588,11 @@
                     <label for="maintenance-note">ملاحظات الصيانة:</label>
                     <textarea id="maintenance-note" placeholder="أدخل ملاحظات الصيانة"></textarea>
                 </div>
-                <button onclick="recordMaintenance()">تسجيل الصيانة</button>
+                <button onclick="recordMaintenance()"><i class="fas fa-check"></i> تسجيل الصيانة</button>
             </div>
             
             <div class="section">
-                <h2>سجل طلبات الصيانة</h2>
+                <h2><i class="fas fa-history"></i> سجل طلبات الصيانة</h2>
                 <table id="maintenance-table">
                     <thead>
                         <tr>
@@ -452,7 +607,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- سيتم ملء هذا الجدول بالبيانات -->
                     </tbody>
                 </table>
             </div>
@@ -460,28 +614,28 @@
         
         <div id="export-tab" class="tab-content">
             <div class="section">
-                <h2>تصدير البيانات</h2>
+                <h2><i class="fas fa-file-export"></i> تصدير البيانات</h2>
                 <div class="export-options">
-                    <button class="export" onclick="exportData('all')">تصدير جميع البيانات</button>
-                    <button class="export" onclick="exportData('inventory')">تصدير الأصناف</button>
-                    <button class="export" onclick="exportData('sales')">تصدير عمليات البيع</button>
-                    <button class="export" onclick="exportData('maintenance')">تصدير طلبات الصيانة</button>
+                    <button class="export" onclick="exportData('all')"><i class="fas fa-download"></i> تصدير جميع البيانات</button>
+                    <button class="export" onclick="exportData('inventory')"><i class="fas fa-download"></i> تصدير الأصناف</button>
+                    <button class="export" onclick="exportData('sales')"><i class="fas fa-download"></i> تصدير عمليات البيع</button>
+                    <button class="export" onclick="exportData('maintenance')"><i class="fas fa-download"></i> تصدير طلبات الصيانة</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="admin-container" class="container" style="display: none;">
-        <h1>لوحة تحكم المسؤول</h1>
+        <h1><i class="fas fa-user-cog"></i> لوحة تحكم المسؤول</h1>
         <div class="tabs">
-            <div class="tab active" onclick="switchAdminTab('centers-tab')">إدارة المراكز</div>
-            <div class="tab" onclick="switchAdminTab('view-data-tab')">عرض بيانات المراكز</div>
-            <div class="tab" onclick="logout()">تسجيل الخروج</div>
+            <div class="tab active" onclick="switchAdminTab('centers-tab')"><i class="fas fa-building"></i> إدارة المراكز</div>
+            <div class="tab" onclick="switchAdminTab('view-data-tab')"><i class="fas fa-database"></i> عرض بيانات المراكز</div>
+            <div class="tab" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
         </div>
         
         <div id="centers-tab" class="tab-content active">
             <div class="section">
-                <h2>إضافة مركز جديد</h2>
+                <h2><i class="fas fa-plus-circle"></i> إضافة مركز جديد</h2>
                 <div class="form-group">
                     <label for="new-center-name">اسم المركز:</label>
                     <input type="text" id="new-center-name" placeholder="أدخل اسم المركز">
@@ -490,11 +644,11 @@
                     <label for="new-center-password">كلمة مرور المركز:</label>
                     <input type="password" id="new-center-password" placeholder="أدخل كلمة المرور">
                 </div>
-                <button onclick="addNewCenter()">إضافة مركز جديد</button>
+                <button onclick="addNewCenter()"><i class="fas fa-plus"></i> إضافة مركز جديد</button>
             </div>
             
             <div class="section">
-                <h2>قائمة المراكز</h2>
+                <h2><i class="fas fa-list"></i> قائمة المراكز</h2>
                 <table id="centers-table">
                     <thead>
                         <tr>
@@ -504,7 +658,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- سيتم ملء هذا الجدول بالبيانات -->
                     </tbody>
                 </table>
             </div>
@@ -512,7 +665,7 @@
         
         <div id="view-data-tab" class="tab-content">
             <div class="section">
-                <h2>عرض بيانات المراكز</h2>
+                <h2><i class="fas fa-database"></i> عرض بيانات المراكز</h2>
                 <div class="form-group center-select">
                     <label for="admin-center-select">اختر المركز:</label>
                     <select id="admin-center-select">
@@ -557,7 +710,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- سيتم ملء هذا الجدول بالبيانات -->
                         </tbody>
                     </table>
                 </div>
@@ -574,7 +726,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- سيتم ملء هذا الجدول بالبيانات -->
                         </tbody>
                     </table>
                 </div>
@@ -593,7 +744,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- سيتم ملء هذا الجدول بالبيانات -->
                         </tbody>
                     </table>
                 </div>
@@ -602,240 +752,784 @@
     </div>
 
     <script>
-     // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyA8THKyWr50bcGWOd7MHFpPqlBE4gvp6Hk",
-    authDomain: "main-maintenance.firebaseapp.com",
-    projectId: "main-maintenance",
-    storageBucket: "main-maintenance.firebasestorage.app",
-    messagingSenderId: "806089947936",
-    appId: "1:806089947936:web:5af0c59c22c87883fe3545"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-    
-    // بيانات التخزين
-    let centers = [];
-    let currentCenter = null;
-    let isAdmin = false;
-    
-    // تهيئة الصفحة
-    function initializePage() {
-        // تحميل بيانات المراكز من Firebase
-        loadCentersFromFirebase();
+        // تهيئة Firebase - استبدل هذه القيم ببيانات مشروعك من Firebase Console
+      
+   const firebaseConfig = {
+  apiKey: "AIzaSyA8THKyWr50bcGWOd7MHFpPqlBE4gvp6Hk",
+  authDomain: "main-maintenance.firebaseapp.com",
+  projectId: "main-maintenance",
+  storageBucket: "main-maintenance.appspot.com",  // تصحيح هنا
+  messagingSenderId: "806089947936",
+  appId: "1:806089947936:web:90af1597a0a8a558fe3545"
+};
         
-        // التحقق من حالة المصادقة
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                // إذا كان المستخدم مسجلاً دخوله
-                const userData = JSON.parse(localStorage.getItem('userData'));
-                if (userData && userData.centerId) {
-                    if (userData.isAdmin) {
-                        isAdmin = true;
-                        showAdminPanel();
-                    } else {
-                        loadCenterFromFirebase(userData.centerId);
-                    }
-                }
-            } else {
-                // إذا لم يكن المستخدم مسجلاً دخوله
-                document.getElementById('login-page').style.display = 'block';
-                document.getElementById('app-container').style.display = 'none';
-                document.getElementById('admin-container').style.display = 'none';
+        // تهيئة Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // بيانات التخزين
+        let centers = [];
+        let currentCenter = null;
+        let isAdmin = false;
+        const adminPassword = "admin123"; // كلمة مرور المسؤول الافتراضية
+        
+        // أسماء الكولكشن في Firebase
+        const CENTERS_COLLECTION = "centers";
+        const INVENTORY_COLLECTION = "inventory";
+        const SALES_COLLECTION = "sales";
+        const MAINTENANCE_COLLECTION = "maintenance";
+        
+        // تهيئة الصفحة
+        function initializePage() {
+            // تحميل بيانات المراكز من Firebase
+            loadCentersFromFirebase();
+            
+            // إذا كان هناك مركز مسجل مسبقاً، تخطي صفحة التسجيل
+            const savedCenter = localStorage.getItem('currentCenter');
+            if (savedCenter) {
+                currentCenter = JSON.parse(savedCenter);
+                showApp();
             }
-        });
-    }
-    
-    // تحميل المراكز من Firebase
-    async function loadCentersFromFirebase() {
-        try {
-            const snapshot = await db.collection('centers').get();
-            centers = [];
-            snapshot.forEach(doc => {
-                centers.push({ id: doc.id, ...doc.data() });
+        }
+        
+        // تحميل المراكز من Firebase
+        async function loadCentersFromFirebase() {
+            try {
+                showNotification('جاري تحميل البيانات...', 'success');
+                const snapshot = await db.collection(CENTERS_COLLECTION).get();
+                centers = [];
+                snapshot.forEach(doc => {
+                    centers.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // إضافة المركز الافتراضي (العاشر) إذا لم يكن موجوداً
+                if (!centers.some(c => c.name === "العاشر")) {
+                    await addDefaultCenter();
+                }
+                
+                // تحديث واجهة المستخدم
+                updateCenterSelects();
+                showNotification('تم تحميل البيانات بنجاح', 'success');
+            } catch (error) {
+                console.error('Error loading centers:', error);
+                showNotification('حدث خطأ في تحميل بيانات المراكز', 'error');
+            }
+        }
+        
+        // إضافة المركز الافتراضي (العاشر)
+        async function addDefaultCenter() {
+            try {
+                const defaultCenter = {
+                    name: "العاشر",
+                    password: "12345",
+                    inventory: [],
+                    sales: [],
+                    maintenance: []
+                };
+                
+                const docRef = await db.collection(CENTERS_COLLECTION).add(defaultCenter);
+                centers.push({ id: docRef.id, ...defaultCenter });
+                
+                // إنشاء مستخدم للمركز في Authentication
+                await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, "12345");
+                
+                showNotification('تم إضافة المركز الافتراضي (العاشر) بنجاح', 'success');
+            } catch (error) {
+                console.error('Error adding default center:', error);
+                showNotification('حدث خطأ أثناء إضافة المركز الافتراضي', 'error');
+            }
+        }
+        
+        // تحديث قوائم اختيار المراكز
+        function updateCenterSelects() {
+            const centerSelect = document.getElementById('center-select');
+            const adminCenterSelect = document.getElementById('admin-center-select');
+            
+            // مسح القوائم الحالية
+            centerSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
+            adminCenterSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
+            
+            // إضافة خيار لوحة المسؤول
+            const adminOption = document.createElement('option');
+            adminOption.value = 'admin';
+            adminOption.textContent = 'لوحة المسؤول';
+            centerSelect.appendChild(adminOption);
+            
+            // إضافة المراكز إلى القوائم
+            centers.forEach(center => {
+                const option = document.createElement('option');
+                option.value = center.id;
+                option.textContent = center.name;
+                
+                centerSelect.appendChild(option.cloneNode(true));
+                adminCenterSelect.appendChild(option.cloneNode(true));
             });
             
-            // تحديث واجهة المستخدم
-            updateCenterSelects();
-        } catch (error) {
-            console.error('Error loading centers:', error);
-            alert('حدث خطأ في تحميل بيانات المراكز');
-        }
-    }
-    
-    // تحميل بيانات مركز من Firebase
-    async function loadCenterFromFirebase(centerId) {
-        try {
-            const doc = await db.collection('centers').doc(centerId).get();
-            if (doc.exists) {
-                currentCenter = { id: doc.id, ...doc.data() };
-                localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
-                showApp();
-            } else {
-                alert('المركز غير موجود');
-            }
-        } catch (error) {
-            console.error('Error loading center:', error);
-            alert('حدث خطأ في تحميل بيانات المركز');
-        }
-    }
-    
-    // تسجيل الدخول مع Firebase Authentication
-    async function login() {
-        const centerSelect = document.getElementById('center-select');
-        const passwordInput = document.getElementById('password');
-        const centerId = centerSelect.value;
-        const password = passwordInput.value;
-        
-        if (!centerId) {
-            alert('يرجى اختيار مركز');
-            return;
+            // تحديث جدول المراكز في لوحة المسؤول
+            updateCentersTable();
         }
         
-        if (!password) {
-            alert('يرجى إدخال كلمة المرور');
-            return;
-        }
-        
-        // دخول كمسؤول
-        if (centerId === 'admin') {
+        // تحميل بيانات مركز من Firebase
+        async function loadCenterFromFirebase(centerId) {
             try {
-                // تسجيل الدخول كمسؤول باستخدام البريد الإلكتروني وكلمة المرور
-                const userCredential = await auth.signInWithEmailAndPassword('admin@example.com', password);
-                const user = userCredential.user;
-                
-                if (user) {
-                    isAdmin = true;
-                    localStorage.setItem('userData', JSON.stringify({ isAdmin: true }));
-                    showAdminPanel();
+                showNotification('جاري تحميل بيانات المركز...', 'success');
+                const doc = await db.collection(CENTERS_COLLECTION).doc(centerId).get();
+                if (doc.exists) {
+                    currentCenter = { id: doc.id, ...doc.data() };
+                    localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                    showApp();
+                    showNotification('تم تحميل بيانات المركز بنجاح', 'success');
+                } else {
+                    showNotification('المركز غير موجود', 'error');
                 }
             } catch (error) {
-                console.error('Admin login error:', error);
-                alert('كلمة مرور المسؤول غير صحيحة');
+                console.error('Error loading center:', error);
+                showNotification('حدث خطأ في تحميل بيانات المركز', 'error');
             }
-            return;
         }
         
-        // دخول كمركز عادي
-        try {
-            const center = centers.find(c => c.id === centerId);
-            if (!center) {
-                alert('المركز غير موجود');
+        // تسجيل الدخول مع Firebase Authentication
+        async function login() {
+            const centerSelect = document.getElementById('center-select');
+            const passwordInput = document.getElementById('password');
+            const centerId = centerSelect.value;
+            const password = passwordInput.value;
+            
+            if (!centerId) {
+                showNotification('يرجى اختيار مركز', 'error');
                 return;
             }
             
-            // تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
-            const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
-            const user = userCredential.user;
-            
-            if (user) {
-                localStorage.setItem('userData', JSON.stringify({ 
-                    centerId: center.id, 
-                    isAdmin: false 
-                }));
-                loadCenterFromFirebase(center.id);
+            if (!password) {
+                showNotification('يرجى إدخال كلمة المرور', 'error');
+                return;
             }
-        } catch (error) {
-            console.error('Login error:', error);
-            alert('كلمة المرور غير صحيحة');
+            
+            // دخول كمسؤول
+            if (centerId === 'admin') {
+                if (password === adminPassword) {
+                    isAdmin = true;
+                    showAdminPanel();
+                    showNotification('تم الدخول كمسؤول', 'success');
+                } else {
+                    showNotification('كلمة مرور المسؤول غير صحيحة', 'error');
+                }
+                return;
+            }
+            
+            // دخول كمركز عادي
+            try {
+                const center = centers.find(c => c.id === centerId);
+                if (!center) {
+                    showNotification('المركز غير موجود', 'error');
+                    return;
+                }
+                
+                if (center.password !== password) {
+                    showNotification('كلمة المرور غير صحيحة', 'error');
+                    return;
+                }
+                
+                // تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
+                const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
+                const user = userCredential.user;
+                
+                if (user) {
+                    localStorage.setItem('userData', JSON.stringify({ 
+                        centerId: center.id, 
+                        isAdmin: false 
+                    }));
+                    loadCenterFromFirebase(center.id);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification('كلمة المرور غير صحيحة', 'error');
+            }
         }
-    }
-    
-    // إضافة مركز جديد إلى Firebase
-    async function addNewCenter() {
-        const name = document.getElementById('new-center-name').value.trim();
-        const password = document.getElementById('new-center-password').value;
         
-        if (!name || !password) {
-            alert('يرجى ملء جميع الحقول');
-            return;
+        // إضافة مركز جديد إلى Firebase
+        async function addNewCenter() {
+            const name = document.getElementById('new-center-name').value.trim();
+            const password = document.getElementById('new-center-password').value;
+            
+            if (!name || !password) {
+                showNotification('يرجى ملء جميع الحقول', 'error');
+                return;
+            }
+            
+            // التأكد من أن اسم المركز غير مكرر
+            if (centers.some(center => center.name === name)) {
+                showNotification('اسم المركز موجود مسبقاً', 'error');
+                return;
+            }
+            
+            try {
+                showNotification('جاري إضافة المركز...', 'success');
+                // إضافة مركز إلى Firestore
+                const docRef = await db.collection(CENTERS_COLLECTION).add({
+                    name: name,
+                    password: password,
+                    inventory: [],
+                    sales: [],
+                    maintenance: []
+                });
+                
+                // إنشاء مستخدم للمركز في Authentication
+                await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, password);
+                
+                // إعادة تعيين الحقول
+                document.getElementById('new-center-name').value = '';
+                document.getElementById('new-center-password').value = '';
+                
+                // تحديث القوائم
+                await loadCentersFromFirebase();
+                
+                showNotification('تم إضافة المركز بنجاح!', 'success');
+            } catch (error) {
+                console.error('Error adding center:', error);
+                showNotification('حدث خطأ أثناء إضافة المركز', 'error');
+            }
         }
         
-        // التأكد من أن اسم المركز غير مكرر
-        if (centers.some(center => center.name === name)) {
-            alert('اسم المركز موجود مسبقاً');
-            return;
+        // حفظ بيانات المركز في Firebase
+        async function saveCenterData() {
+            if (!currentCenter) return;
+            
+            try {
+                showNotification('جاري حفظ البيانات...', 'success');
+                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id).update({
+                    inventory: currentCenter.inventory,
+                    sales: currentCenter.sales,
+                    maintenance: currentCenter.maintenance
+                });
+                
+                // تحديث واجهة المستخدم
+                updateItemSelects();
+                updateItemsTable();
+                updateSalesTable();
+                updateMaintenanceTable();
+                updateInventorySummary();
+                
+                showNotification('تم حفظ البيانات بنجاح', 'success');
+            } catch (error) {
+                console.error('Error saving center data:', error);
+                showNotification('حدث خطأ أثناء حفظ البيانات', 'error');
+            }
         }
         
-        try {
-            // إضافة مركز إلى Firestore
-            const docRef = await db.collection('centers').add({
+        // تسجيل الخروج من Firebase
+        function logout() {
+            auth.signOut().then(() => {
+                currentCenter = null;
+                isAdmin = false;
+                localStorage.removeItem('currentCenter');
+                localStorage.removeItem('userData');
+                
+                document.getElementById('login-page').style.display = 'block';
+                document.getElementById('app-container').style.display = 'none';
+                document.getElementById('admin-container').style.display = 'none';
+                
+                // مسح كلمة المرور
+                document.getElementById('password').value = '';
+                
+                showNotification('تم تسجيل الخروج بنجاح', 'success');
+            }).catch(error => {
+                console.error('Logout error:', error);
+                showNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
+            });
+        }
+        
+        // التبديل بين علامات التبويب
+        function switchTab(tabId) {
+            // إخفاء جميع محتويات علامات التبويب
+            document.querySelectorAll('#app-container .tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // إلغاء تنشيط جميع علامات التبويب
+            document.querySelectorAll('#app-container .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // تفعيل علامة التبويب المحددة
+            document.getElementById(tabId).classList.add('active');
+            
+            // تفعيل زر علامة التبويب المحددة
+            document.querySelector(`#app-container .tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        }
+        
+        // التبديل بين علامات التبويب في لوحة المسؤول
+        function switchAdminTab(tabId) {
+            // إخفاء جميع محتويات علامات التبويب
+            document.querySelectorAll('#admin-container .tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // إلغاء تنشيط جميع علامات التبويب
+            document.querySelectorAll('#admin-container .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // تفعيل علامة التبويب المحددة
+            document.getElementById(tabId).classList.add('active');
+            
+            // تفعيل زر علامة التبويب المحددة
+            document.querySelector(`#admin-container .tab[onclick="switchAdminTab('${tabId}')"]`).classList.add('active');
+        }
+        
+        // التبديل بين علامات التبويب في بيانات المركز
+        function switchCenterDataTab(tabId) {
+            // إخفاء جميع محتويات علامات التبويب
+            document.querySelectorAll('#view-data-tab .tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // إلغاء تنشيط جميع علامات التبويب
+            document.querySelectorAll('#view-data-tab .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // تفعيل علامة التبويب المحددة
+            document.getElementById(tabId).classList.add('active');
+            
+            // تفعيل زر علامة التبويب المحددة
+            document.querySelector(`#view-data-tab .tab[onclick="switchCenterDataTab('${tabId}')"]`).classList.add('active');
+            
+            // تحميل بيانات علامة التبويب المحددة
+            const centerId = document.getElementById('admin-center-select').value;
+            if (centerId) {
+                loadCenterDataForAdmin(centerId);
+            }
+        }
+        
+        // إضافة صنف جديد
+        async function addNewItem() {
+            if (!currentCenter) return;
+            
+            const name = document.getElementById('item-name').value.trim();
+            const quantity = parseInt(document.getElementById('initial-quantity').value);
+            const price = parseFloat(document.getElementById('item-price').value);
+            const note = document.getElementById('item-note').value.trim();
+            
+            if (!name || isNaN(quantity) || isNaN(price)) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            const newItem = {
+                id: Date.now(),
                 name: name,
-                password: password,
-                inventory: [],
-                sales: [],
-                maintenance: []
-            });
+                quantity: quantity,
+                price: price,
+                note: note,
+                createdAt: new Date()
+            };
             
-            // إنشاء مستخدم للمركز في Authentication
-            await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, password);
-            
-            // إعادة تعيين الحقول
-            document.getElementById('new-center-name').value = '';
-            document.getElementById('new-center-password').value = '';
-            
-            // تحديث القوائم
-            await loadCentersFromFirebase();
-            
-            alert('تم إضافة المركز بنجاح!');
-        } catch (error) {
-            console.error('Error adding center:', error);
-            alert('حدث خطأ أثناء إضافة المركز');
+            try {
+                // إضافة الصنف إلى Firestore
+                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                    .collection(INVENTORY_COLLECTION).add(newItem);
+                
+                // تحديث البيانات المحلية
+                currentCenter.inventory.push(newItem);
+                await saveCenterData();
+                
+                showNotification('تم إضافة الصنف بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('item-name').value = '';
+                document.getElementById('initial-quantity').value = '';
+                document.getElementById('item-price').value = '';
+                document.getElementById('item-note').value = '';
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showNotification('حدث خطأ أثناء إضافة الصنف', 'error');
+            }
         }
-    }
-    
-    // حفظ بيانات المركز في Firebase
-    async function saveCenterData() {
-        if (!currentCenter) return;
         
-        try {
-            await db.collection('centers').doc(currentCenter.id).update({
-                inventory: currentCenter.inventory,
-                sales: currentCenter.sales,
-                maintenance: currentCenter.maintenance
+        // إضافة إلى المخزون
+        async function addToInventory() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('add-item').value;
+            const quantity = parseInt(document.getElementById('add-quantity').value);
+            const note = document.getElementById('add-note').value.trim();
+            
+            if (!itemId || isNaN(quantity)) {
+                showNotification('يرجى اختيار صنف وإدخال الكمية', 'error');
+                return;
+            }
+            
+            try {
+                const item = currentCenter.inventory.find(i => i.id == itemId);
+                if (item) {
+                    // تحديث كمية الصنف في Firestore
+                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
+                            quantity: firebase.firestore.FieldValue.increment(quantity)
+                        });
+                    
+                    // تحديث البيانات المحلية
+                    item.quantity += quantity;
+                    await saveCenterData();
+                    
+                    showNotification('تمت إضافة الكمية إلى المخزون بنجاح', 'success');
+                    
+                    // إعادة تعيين الحقول
+                    document.getElementById('add-item').value = '';
+                    document.getElementById('add-quantity').value = '';
+                    document.getElementById('add-note').value = '';
+                }
+            } catch (error) {
+                console.error('Error adding to inventory:', error);
+                showNotification('حدث خطأ أثناء إضافة الكمية إلى المخزون', 'error');
+            }
+        }
+        
+        // تسجيل عملية بيع
+        async function recordSale() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('sale-item').value;
+            const quantity = parseInt(document.getElementById('sale-quantity').value);
+            const customerName = document.getElementById('customer-name').value.trim();
+            const customerPhone = document.getElementById('customer-phone').value.trim();
+            
+            if (!itemId || isNaN(quantity) || !customerName) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            try {
+                const item = currentCenter.inventory.find(i => i.id == itemId);
+                if (item) {
+                    if (item.quantity < quantity) {
+                        showNotification('الكمية المتاحة غير كافية', 'error');
+                        return;
+                    }
+                    
+                    const saleRecord = {
+                        itemId: itemId,
+                        itemName: item.name,
+                        quantity: quantity,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        date: new Date(),
+                        totalPrice: quantity * item.price
+                    };
+                    
+                    // إضافة عملية البيع إلى Firestore
+                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                        .collection(SALES_COLLECTION).add(saleRecord);
+                    
+                    // تحديث كمية الصنف في Firestore
+                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
+                            quantity: firebase.firestore.FieldValue.increment(-quantity)
+                        });
+                    
+                    // تحديث البيانات المحلية
+                    item.quantity -= quantity;
+                    currentCenter.sales.push(saleRecord);
+                    await saveCenterData();
+                    
+                    showNotification('تم تسجيل عملية البيع بنجاح', 'success');
+                    
+                    // إعادة تعيين الحقول
+                    document.getElementById('sale-item').value = '';
+                    document.getElementById('sale-quantity').value = '';
+                    document.getElementById('customer-name').value = '';
+                    document.getElementById('customer-phone').value = '';
+                }
+            } catch (error) {
+                console.error('Error recording sale:', error);
+                showNotification('حدث خطأ أثناء تسجيل عملية البيع', 'error');
+            }
+        }
+        
+        // تسجيل عملية صيانة
+        async function recordMaintenance() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('maintenance-item').value;
+            const quantity = parseInt(document.getElementById('maintenance-quantity').value);
+            const customerName = document.getElementById('maintenance-customer-name').value.trim();
+            const customerPhone = document.getElementById('maintenance-customer-phone').value.trim();
+            const deviceName = document.getElementById('device-name').value.trim();
+            const technicianName = document.getElementById('technician-name').value.trim();
+            const status = document.getElementById('maintenance-status').value;
+            const note = document.getElementById('maintenance-note').value.trim();
+            
+            if (!itemId || isNaN(quantity) || !customerName || !deviceName || !technicianName) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            try {
+                const item = currentCenter.inventory.find(i => i.id == itemId);
+                if (item) {
+                    if (item.quantity < quantity) {
+                        showNotification('الكمية المتاحة غير كافية', 'error');
+                        return;
+                    }
+                    
+                    const maintenanceRecord = {
+                        itemId: itemId,
+                        itemName: item.name,
+                        quantity: quantity,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        deviceName: deviceName,
+                        technicianName: technicianName,
+                        status: status,
+                        note: note,
+                        date: new Date()
+                    };
+                    
+                    // إضافة عملية الصيانة إلى Firestore
+                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                        .collection(MAINTENANCE_COLLECTION).add(maintenanceRecord);
+                    
+                    // تحديث كمية الصنف في Firestore
+                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
+                            quantity: firebase.firestore.FieldValue.increment(-quantity)
+                        });
+                    
+                    // تحديث البيانات المحلية
+                    item.quantity -= quantity;
+                    currentCenter.maintenance.push(maintenanceRecord);
+                    await saveCenterData();
+                    
+                    showNotification('تم تسجيل عملية الصيانة بنجاح', 'success');
+                    
+                    // إعادة تعيين الحقول
+                    document.getElementById('maintenance-item').value = '';
+                    document.getElementById('maintenance-quantity').value = '';
+                    document.getElementById('maintenance-customer-name').value = '';
+                    document.getElementById('maintenance-customer-phone').value = '';
+                    document.getElementById('device-name').value = '';
+                    document.getElementById('technician-name').value = '';
+                    document.getElementById('maintenance-note').value = '';
+                }
+            } catch (error) {
+                console.error('Error recording maintenance:', error);
+                showNotification('حدث خطأ أثناء تسجيل عملية الصيانة', 'error');
+            }
+        }
+        
+        // تصدير البيانات
+        function exportData(type) {
+            // في تطبيق حقيقي، هنا سيتم تصدير البيانات حسب النوع المحدد
+            showNotification(`تم تصدير بيانات ${type} بنجاح`, 'success');
+        }
+        
+        // تحديث قوائم اختيار الأصناف
+        function updateItemSelects() {
+            if (!currentCenter) return;
+            
+            const addItemSelect = document.getElementById('add-item');
+            const saleItemSelect = document.getElementById('sale-item');
+            const maintenanceItemSelect = document.getElementById('maintenance-item');
+            
+            // مسح القوائم الحالية
+            addItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+            saleItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+            maintenanceItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+            
+            // إضافة الأصناف إلى القوائم
+            currentCenter.inventory.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                
+                addItemSelect.appendChild(option.cloneNode(true));
+                saleItemSelect.appendChild(option.cloneNode(true));
+                maintenanceItemSelect.appendChild(option.cloneNode(true));
             });
+        }
+        
+        // تحديث جدول الأصناف
+        function updateItemsTable() {
+            if (!currentCenter) return;
+            
+            const tbody = document.querySelector('#items-table tbody');
+            tbody.innerHTML = '';
+            
+            currentCenter.inventory.forEach(item => {
+                const row = document.createElement('tr');
+                const value = item.quantity * item.price;
+                
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.price.toFixed(2)} جنيه</td>
+                    <td>${value.toFixed(2)} جنيه</td>
+                    <td>${item.note || ''}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // تحديث جدول المبيعات
+        function updateSalesTable() {
+            if (!currentCenter) return;
+            
+            const tbody = document.querySelector('#sales-table tbody');
+            tbody.innerHTML = '';
+            
+            currentCenter.sales.slice().reverse().forEach(sale => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${new Date(sale.date).toLocaleString('ar-EG')}</td>
+                    <td>${sale.itemName}</td>
+                    <td>${sale.quantity}</td>
+                    <td>${sale.customerName}</td>
+                    <td>${sale.customerPhone}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // تحديث جدول الصيانة
+        function updateMaintenanceTable() {
+            if (!currentCenter) return;
+            
+            const tbody = document.querySelector('#maintenance-table tbody');
+            tbody.innerHTML = '';
+            
+            currentCenter.maintenance.slice().reverse().forEach(maintenance => {
+                const row = document.createElement('tr');
+                
+                // تحديد فئة الحالة
+                let statusClass = '';
+                if (maintenance.status === 'في انتظار قطعة غيار') statusClass = 'status-waiting-part';
+                else if (maintenance.status === 'في انتظار الفني') statusClass = 'status-waiting-technician';
+                else if (maintenance.status === 'تم الصيانة') statusClass = 'status-completed';
+                else if (maintenance.status === 'في انتظار العميل') statusClass = 'status-waiting-customer';
+                
+                row.innerHTML = `
+                    <td>${new Date(maintenance.date).toLocaleString('ar-EG')}</td>
+                    <td>${maintenance.itemName}</td>
+                    <td>${maintenance.quantity}</td>
+                    <td>${maintenance.customerName}<br>${maintenance.customerPhone}</td>
+                    <td>${maintenance.deviceName}</td>
+                    <td>${maintenance.technicianName}</td>
+                    <td><span class="maintenance-status ${statusClass}">${maintenance.status}</span></td>
+                    <td class="action-buttons">
+                        <button class="delete" onclick="deleteMaintenance('${maintenance.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // تحديث الإحصائيات
+        function updateInventorySummary() {
+            if (!currentCenter) return;
+            
+            const totalItems = currentCenter.inventory.length;
+            const totalQuantity = currentCenter.inventory.reduce((sum, item) => sum + item.quantity, 0);
+            const totalValue = currentCenter.inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            const totalSales = currentCenter.sales.length;
+            const totalMaintenance = currentCenter.maintenance.length;
+            const totalSalesValue = currentCenter.sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+            
+            document.getElementById('total-items').textContent = totalItems;
+            document.getElementById('total-quantity').textContent = totalQuantity;
+            document.getElementById('total-value').textContent = totalValue.toFixed(2);
+            document.getElementById('total-sales').textContent = totalSales;
+            document.getElementById('total-maintenance').textContent = totalMaintenance;
+            document.getElementById('total-sales-value').textContent = totalSalesValue.toFixed(2);
+        }
+        
+        // حذف طلب صيانة
+        async function deleteMaintenance(id) {
+            if (!confirm('هل أنت متأكد من حذف طلب الصيانة هذا؟')) {
+                return;
+            }
+            
+            try {
+                // حذف طلب الصيانة من Firestore
+                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
+                    .collection(MAINTENANCE_COLLECTION).doc(id).delete();
+                
+                // تحديث البيانات المحلية
+                currentCenter.maintenance = currentCenter.maintenance.filter(m => m.id !== id);
+                await saveCenterData();
+                
+                showNotification('تم حذف طلب الصيانة بنجاح', 'success');
+            } catch (error) {
+                console.error('Error deleting maintenance:', error);
+                showNotification('حدث خطأ أثناء حذف طلب الصيانة', 'error');
+            }
+        }
+        
+        // تحديث جدول المراكز
+        function updateCentersTable() {
+            const tbody = document.querySelector('#centers-table tbody');
+            tbody.innerHTML = '';
+            
+            centers.forEach(center => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${center.name}</td>
+                    <td>${center.password}</td>
+                    <td class="action-buttons">
+                        <button onclick="editCenter('${center.id}')">تعديل</button>
+                        <button class="delete" onclick="deleteCenter('${center.id}')">حذف</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // عرض لوحة المسؤول
+        function showAdminPanel() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('admin-container').style.display = 'block';
+        }
+        
+        // عرض تطبيق المركز
+        function showApp() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('admin-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
             
             // تحديث واجهة المستخدم
+            document.getElementById('center-header').textContent = currentCenter.name;
+            
+            // تحديث البيانات
             updateItemSelects();
             updateItemsTable();
             updateSalesTable();
             updateMaintenanceTable();
             updateInventorySummary();
-        } catch (error) {
-            console.error('Error saving center data:', error);
-            alert('حدث خطأ أثناء حفظ البيانات');
         }
-    }
-    
-    // تسجيل الخروج من Firebase
-    function logout() {
-        auth.signOut().then(() => {
-            currentCenter = null;
-            isAdmin = false;
-            localStorage.removeItem('currentCenter');
-            localStorage.removeItem('userData');
+        
+        // عرض الإشعارات
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
             
-            document.getElementById('login-page').style.display = 'block';
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('admin-container').style.display = 'none';
-            
-            // مسح كلمة المرور
-            document.getElementById('password').value = '';
-        }).catch(error => {
-            console.error('Logout error:', error);
-        });
-    }
-    
-    // ... باقي الدوال تبقى كما هي مع استبدال localStorage بـ Firebase ...
-    
-    // تهيئة الصفحة عند التحميل
-    document.addEventListener('DOMContentLoaded', initializePage);
-</script>
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // تهيئة الصفحة عند التحميل
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
 </body>
 </html>
