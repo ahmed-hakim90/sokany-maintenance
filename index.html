@@ -391,6 +391,10 @@
             </select>
         </div>
         <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> البريد الإلكتروني:</label>
+            <input type="email" id="email" placeholder="أدخل البريد الإلكتروني">
+        </div>
+        <div class="form-group">
             <label for="password"><i class="fas fa-lock"></i> كلمة المرور:</label>
             <input type="password" id="password" placeholder="أدخل كلمة المرور">
         </div>
@@ -639,6 +643,10 @@
                 <div class="form-group">
                     <label for="new-center-name">اسم المركز:</label>
                     <input type="text" id="new-center-name" placeholder="أدخل اسم المركز">
+                </div>
+                <div class="form-group">
+                    <label for="new-center-email">البريد الإلكتروني:</label>
+                    <input type="email" id="new-center-email" placeholder="أدخل البريد الإلكتروني">
                 </div>
                 <div class="form-group">
                     <label for="new-center-password">كلمة مرور المركز:</label>
@@ -894,12 +902,19 @@
         // تسجيل الدخول مع Firebase Authentication
         async function login() {
             const centerSelect = document.getElementById('center-select');
+            const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             const centerId = centerSelect.value;
+            const email = emailInput.value.trim();
             const password = passwordInput.value;
             
             if (!centerId) {
                 showNotification('يرجى اختيار مركز', 'error');
+                return;
+            }
+            
+            if (!email) {
+                showNotification('يرجى إدخال البريد الإلكتروني', 'error');
                 return;
             }
             
@@ -933,9 +948,25 @@
                     return;
                 }
                 
-                // تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
-                const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
-                const user = userCredential.user;
+                try {
+                    // محاولة تسجيل الدخول
+                    const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
+                    const user = userCredential.user;
+                } catch (authError) {
+                    // إذا لم يكن المستخدم موجوداً، قم بإنشائه
+                    if (authError.code === 'auth/user-not-found') {
+                        try {
+                            await auth.createUserWithEmailAndPassword(`${center.id}@center.com`, password);
+                            showNotification('تم إنشاء حساب المستخدم بنجاح', 'success');
+                        } catch (createError) {
+                            console.error('Error creating user:', createError);
+                            showNotification('خطأ في إنشاء المستخدم', 'error');
+                            return;
+                        }
+                    } else {
+                        throw authError;
+                    }
+                }
                 
                 if (user) {
                     localStorage.setItem('userData', JSON.stringify({ 
@@ -953,6 +984,7 @@
         // إضافة مركز جديد إلى Firebase
         async function addNewCenter() {
             const name = document.getElementById('new-center-name').value.trim();
+            const email = document.getElementById('new-center-email').value.trim();
             const password = document.getElementById('new-center-password').value;
             
             if (!name || !password) {
