@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المخزون متعدد المراكز</title>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.export {
+            background-color: #27ae60;
+        }
+        button.export:hover {
+            background-color: #219653;
+        }
+        button.import {
+            background-color: #f39c12;
+        }
+        button.import:hover {
+            background-color: #e67e22;
+        }
+        button.admin {
+            background-color: #9b59b6;
+        }
+        button.admin:hover {
+            background-color: #8e44ad;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .inventory-summary {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-item h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .summary-item p {
+            margin: 5px 0 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .maintenance-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-waiting-part {
+            background-color: #ffeaa7;
+            color: #d35400;
+        }
+        .status-waiting-technician {
+            background-color: #81ecec;
+            color: #00b894;
+        }
+        .status-completed {
+            background-color: #55efc4;
+            color: #00b894;
+        }
+        .status-waiting-customer {
+            background-color: #fab1a0;
+            color: #e17055;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .action-buttons button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .export-options button {
+            width: auto;
+            padding: 8px 15px;
+        }
+        .login-container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .center-name {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .admin-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .admin-card {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .center-select {
+            margin-bottom: 20px;
+        }
+    </style>
+      <!-- ... الأكواد الأخرى ... -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    
+    <div id="login-page" class="login-container">
+        <h1>نظام إدارة المخزون متعدد المراكز</h1>
+        <div class="form-group">
+            <label for="center-select">اختر المركز:</label>
+            <select id="center-select">
+                <option value="">-- اختر المركز --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="password">كلمة المرور:</label>
+            <input type="password" id="password" placeholder="أدخل كلمة المرور">
+        </div>
+        <button onclick="login()">تسجيل الدخول</button>
+        <div style="margin-top: 20px; text-align: center;">
+            <p>للدخول كمسؤول، اختر "لوحة المسؤول" من القائمة وأدخل كلمة مرور المسؤول</p>
+            <button class="admin" onclick="showAdminLogin()">دخول المسؤول</button>
+        </div>
+    </div>
+
+    <div id="app-container" class="container" style="display: none;">
+        <div id="center-header" class="center-name">اسم المركز</div>
+        
+        <div class="inventory-summary">
+            <div class="summary-item">
+                <h3>إجمالي الأصناف</h3>
+                <p id="total-items">0</p>
+            </div>
+            <div class="summary-item">
+                <h3>إجمالي الكمية</h3>
+                <p id="total-quantity">0</p>
+            </div>
+            <div class="summary-item">
+                <h3>القيمة الإجمالية</h3>
+                <p id="total-value">0 جنيه</p>
+            </div>
+            <div class="summary-item">
+                <h3>عمليات البيع</h3>
+                <p id="total-sales">0</p>
+            </div>
+            <div class="summary-item">
+                <h3>طلبات الصيانة</h3>
+                <p id="total-maintenance">0</p>
+            </div>
+            <div class="summary-item">
+                <h3>قيمة المبيعات</h3>
+                <p id="total-sales-value">0 جنيه</p>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchCenterDataTab('inventory-tab')">إدارة المخزون</div>
+            <div class="tab" onclick="switchCenterDataTab('sales-tab')">عمليات البيع</div>
+            <div class="tab" onclick="switchCenterDataTab('maintenance-tab')">طلبات الصيانة</div>
+            <div class="tab" onclick="switchCenterDataTab('export-tab')">التصدير والاستيراد</div>
+            <div class="tab" onclick="logout()">تسجيل الخروج</div>
+        </div>
+        
+        <div id="inventory-tab" class="tab-content active">
+            <div class="section">
+                <h2>إضافة صنف جديد</h2>
+                <div class="form-group">
+                    <label for="item-name">اسم الصنف:</label>
+                    <input type="text" id="item-name" placeholder="أدخل اسم الصنف">
+                </div>
+                <div class="form-group">
+                    <label for="initial-quantity">الكمية الأولية:</label>
+                    <input type="number" id="initial-quantity" placeholder="أدخل الكمية" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="item-price">سعر الوحدة (جنيه):</label>
+                    <input type="number" id="item-price" placeholder="أدخل السعر" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="item-note">ملاحظات:</label>
+                    <textarea id="item-note" placeholder="أدخل أي ملاحظات حول الصنف"></textarea>
+                </div>
+                <button onclick="addNewItem()">إضافة صنف جديد</button>
+            </div>
+            
+            <div class="section">
+                <h2>إضافة إلى المخزون</h2>
+                <div class="form-group">
+                    <label for="add-item">اختر الصنف:</label>
+                    <select id="add-item">
+                        <option value="">-- اختر صنف --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="add-quantity">الكمية المضافة:</label>
+                    <input type="number" id="add-quantity" placeholder="أدخل الكمية المضافة" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="add-note">ملاحظات:</label>
+                    <textarea id="add-note" placeholder="أدخل أي ملاحظات حول الإضافة"></textarea>
+                </div>
+                <button onclick="addToInventory()">إضافة إلى المخزون</button>
+            </div>
+            
+            <div class="section">
+                <h2>قائمة الأصناف</h2>
+                <table id="items-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الصنف</th>
+                            <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>القيمة</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- سيتم ملء هذا الجدول بالبيانات -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="sales-tab" class="tab-content">
+            <div class="section">
+                <h2>تسجيل عملية بيع</h2>
+                <div class="form-group">
+                    <label for="sale-item">اختر الصنف:</label>
+                    <select id="sale-item">
+                        <option value="">-- اختر صنف --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sale-quantity">كمية البيع:</label>
+                    <input type="number" id="sale-quantity" placeholder="أدخل كمية البيع" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="customer-name">اسم العميل:</label>
+                    <input type="text" id="customer-name" placeholder="أدخل اسم العميل">
+                </div>
+                <div class="form-group">
+                    <label for="customer-phone">رقم تليفون العميل:</label>
+                    <input type="text" id="customer-phone" placeholder="أدخل رقم التليفون">
+                </div>
+                <button onclick="recordSale()">تسجيل البيع</button>
+            </div>
+            
+            <div class="section">
+                <h2>سجل عمليات البيع</h2>
+                <table id="sales-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الصنف</th>
+                            <th>الكمية</th>
+                            <th>اسم العميل</th>
+                            <th>رقم التليفون</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- سيتم ملء هذا الجدول بالبيانات -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="maintenance-tab" class="tab-content">
+            <div class="section">
+                <h2>تسجيل عملية صيانة</h2>
+                <div class="form-group">
+                    <label for="maintenance-item">اختر الصنف:</label>
+                    <select id="maintenance-item">
+                        <option value="">-- اختر صنف --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-quantity">الكمية المستخدمة في الصيانة:</label>
+                    <input type="number" id="maintenance-quantity" placeholder="أدخل الكمية" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-customer-name">اسم العميل:</label>
+                    <input type="text" id="maintenance-customer-name" placeholder="أدخل اسم العميل">
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-customer-phone">رقم تليفون العميل:</label>
+                    <input type="text" id="maintenance-customer-phone" placeholder="أدخل رقم التليفون">
+                </div>
+                <div class="form-group">
+                    <label for="device-name">اسم الجهاز:</label>
+                    <input type="text" id="device-name" placeholder="أدخل اسم الجهاز">
+                </div>
+                <div class="form-group">
+                    <label for="under-warranty">في الضمان:</label>
+                    <select id="under-warranty">
+                        <option value="نعم">نعم</option>
+                        <option value="لا">لا</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="technician-name">اسم الفني:</label>
+                    <input type="text" id="technician-name" placeholder="أدخل اسم الفني">
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-status">حالة طلب الصيانة:</label>
+                    <select id="maintenance-status">
+                        <option value="في انتظار قطعة غيار">في انتظار قطعة غيار</option>
+                        <option value="في انتظار الفني">في انتظار الفني</option>
+                        <option value="تم الصيانة">تم الصيانة</option>
+                        <option value="في انتظار العميل">في انتظار العميل</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-note">ملاحظات الصيانة:</label>
+                    <textarea id="maintenance-note" placeholder="أدخل ملاحظات الصيانة"></textarea>
+                </div>
+                <button onclick="recordMaintenance()">تسجيل الصيانة</button>
+            </div>
+            
+            <div class="section">
+                <h2>سجل طلبات الصيانة</h2>
+                <table id="maintenance-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الصنف</th>
+                            <th>الكمية</th>
+                            <th>العميل</th>
+                            <th>الجهاز</th>
+                            <th>الفني</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- سيتم ملء هذا الجدول بالبيانات -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="export-tab" class="tab-content">
+            <div class="section">
+                <h2>تصدير البيانات</h2>
+                <div class="export-options">
+                    <button class="export" onclick="exportData('all')">تصدير جميع البيانات</button>
+                    <button class="export" onclick="exportData('inventory')">تصدير الأصناف</button>
+                    <button class="export" onclick="exportData('sales')">تصدير عمليات البيع</button>
+                    <button class="export" onclick="exportData('maintenance')">تصدير طلبات الصيانة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-container" class="container" style="display: none;">
+        <h1>لوحة تحكم المسؤول</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="switchAdminTab('centers-tab')">إدارة المراكز</div>
+            <div class="tab" onclick="switchAdminTab('view-data-tab')">عرض بيانات المراكز</div>
+            <div class="tab" onclick="logout()">تسجيل الخروج</div>
+        </div>
+        
+        <div id="centers-tab" class="tab-content active">
+            <div class="section">
+                <h2>إضافة مركز جديد</h2>
+                <div class="form-group">
+                    <label for="new-center-name">اسم المركز:</label>
+                    <input type="text" id="new-center-name" placeholder="أدخل اسم المركز">
+                </div>
+                <div class="form-group">
+                    <label for="new-center-password">كلمة مرور المركز:</label>
+                    <input type="password" id="new-center-password" placeholder="أدخل كلمة المرور">
+                </div>
+                <button onclick="addNewCenter()">إضافة مركز جديد</button>
+            </div>
+            
+            <div class="section">
+                <h2>قائمة المراكز</h2>
+                <table id="centers-table">
+                    <thead>
+                        <tr>
+                            <th>اسم المركز</th>
+                            <th>كلمة المرور</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- سيتم ملء هذا الجدول بالبيانات -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="view-data-tab" class="tab-content">
+            <div class="section">
+                <h2>عرض بيانات المراكز</h2>
+                <div class="form-group center-select">
+                    <label for="admin-center-select">اختر المركز:</label>
+                    <select id="admin-center-select">
+                        <option value="">-- اختر المركز --</option>
+                    </select>
+                </div>
+                
+                <div class="admin-dashboard">
+                    <div class="admin-card">
+                        <h3>إحصائيات المخزون</h3>
+                        <p>إجمالي الأصناف: <span id="admin-total-items">0</span></p>
+                        <p>إجمالي الكمية: <span id="admin-total-quantity">0</span></p>
+                        <p>القيمة الإجمالية: <span id="admin-total-value">0</span> جنيه</p>
+                    </div>
+                    
+                    <div class="admin-card">
+                        <h3>إحصائيات المبيعات</h3>
+                        <p>إجمالي عمليات البيع: <span id="admin-total-sales">0</span></p>
+                    </div>
+                    
+                    <div class="admin-card">
+                        <h3>إحصائيات الصيانة</h3>
+                        <p>إجمالي طلبات الصيانة: <span id="admin-total-maintenance">0</span></p>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="switchCenterDataTab('center-inventory-tab')">المخزون</div>
+                    <div class="tab" onclick="switchCenterDataTab('center-sales-tab')">المبيعات</div>
+                    <div class="tab" onclick="switchCenterDataTab('center-maintenance-tab')">الصيانة</div>
+                </div>
+                
+                <div id="center-inventory-tab" class="tab-content active">
+                    <table id="admin-items-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الصنف</th>
+                                <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>القيمة</th>
+                                <th>ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- سيتم ملء هذا الجدول بالبيانات -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="center-sales-tab" class="tab-content">
+                    <table id="admin-sales-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الصنف</th>
+                                <th>الكمية</th>
+                                <th>اسم العميل</th>
+                                <th>رقم التليفون</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- سيتم ملء هذا الجدول بالبيانات -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="center-maintenance-tab" class="tab-content">
+                    <table id="admin-maintenance-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الصنف</th>
+                                <th>الكمية</th>
+                                <th>العميل</th>
+                                <th>الجهاز</th>
+                                <th>الفني</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- سيتم ملء هذا الجدول بالبيانات -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // تهيئة Firebase
+    const firebaseConfig = {
+        apiKey: "your-api-key",
+        authDomain: "your-project-id.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "your-sender-id",
+        appId: "your-app-id"
+    };
+    
+    // تهيئة Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    
+    // بيانات التخزين
+    let centers = [];
+    let currentCenter = null;
+    let isAdmin = false;
+    
+    // تهيئة الصفحة
+    function initializePage() {
+        // تحميل بيانات المراكز من Firebase
+        loadCentersFromFirebase();
+        
+        // التحقق من حالة المصادقة
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // إذا كان المستخدم مسجلاً دخوله
+                const userData = JSON.parse(localStorage.getItem('userData'));
+                if (userData && userData.centerId) {
+                    if (userData.isAdmin) {
+                        isAdmin = true;
+                        showAdminPanel();
+                    } else {
+                        loadCenterFromFirebase(userData.centerId);
+                    }
+                }
+            } else {
+                // إذا لم يكن المستخدم مسجلاً دخوله
+                document.getElementById('login-page').style.display = 'block';
+                document.getElementById('app-container').style.display = 'none';
+                document.getElementById('admin-container').style.display = 'none';
+            }
+        });
+    }
+    
+    // تحميل المراكز من Firebase
+    async function loadCentersFromFirebase() {
+        try {
+            const snapshot = await db.collection('centers').get();
+            centers = [];
+            snapshot.forEach(doc => {
+                centers.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // تحديث واجهة المستخدم
+            updateCenterSelects();
+        } catch (error) {
+            console.error('Error loading centers:', error);
+            alert('حدث خطأ في تحميل بيانات المراكز');
+        }
+    }
+    
+    // تحميل بيانات مركز من Firebase
+    async function loadCenterFromFirebase(centerId) {
+        try {
+            const doc = await db.collection('centers').doc(centerId).get();
+            if (doc.exists) {
+                currentCenter = { id: doc.id, ...doc.data() };
+                localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                showApp();
+            } else {
+                alert('المركز غير موجود');
+            }
+        } catch (error) {
+            console.error('Error loading center:', error);
+            alert('حدث خطأ في تحميل بيانات المركز');
+        }
+    }
+    
+    // تسجيل الدخول مع Firebase Authentication
+    async function login() {
+        const centerSelect = document.getElementById('center-select');
+        const passwordInput = document.getElementById('password');
+        const centerId = centerSelect.value;
+        const password = passwordInput.value;
+        
+        if (!centerId) {
+            alert('يرجى اختيار مركز');
+            return;
+        }
+        
+        if (!password) {
+            alert('يرجى إدخال كلمة المرور');
+            return;
+        }
+        
+        // دخول كمسؤول
+        if (centerId === 'admin') {
+            try {
+                // تسجيل الدخول كمسؤول باستخدام البريد الإلكتروني وكلمة المرور
+                const userCredential = await auth.signInWithEmailAndPassword('admin@example.com', password);
+                const user = userCredential.user;
+                
+                if (user) {
+                    isAdmin = true;
+                    localStorage.setItem('userData', JSON.stringify({ isAdmin: true }));
+                    showAdminPanel();
+                }
+            } catch (error) {
+                console.error('Admin login error:', error);
+                alert('كلمة مرور المسؤول غير صحيحة');
+            }
+            return;
+        }
+        
+        // دخول كمركز عادي
+        try {
+            const center = centers.find(c => c.id === centerId);
+            if (!center) {
+                alert('المركز غير موجود');
+                return;
+            }
+            
+            // تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
+            const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
+            const user = userCredential.user;
+            
+            if (user) {
+                localStorage.setItem('userData', JSON.stringify({ 
+                    centerId: center.id, 
+                    isAdmin: false 
+                }));
+                loadCenterFromFirebase(center.id);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('كلمة المرور غير صحيحة');
+        }
+    }
+    
+    // إضافة مركز جديد إلى Firebase
+    async function addNewCenter() {
+        const name = document.getElementById('new-center-name').value.trim();
+        const password = document.getElementById('new-center-password').value;
+        
+        if (!name || !password) {
+            alert('يرجى ملء جميع الحقول');
+            return;
+        }
+        
+        // التأكد من أن اسم المركز غير مكرر
+        if (centers.some(center => center.name === name)) {
+            alert('اسم المركز موجود مسبقاً');
+            return;
+        }
+        
+        try {
+            // إضافة مركز إلى Firestore
+            const docRef = await db.collection('centers').add({
+                name: name,
+                password: password,
+                inventory: [],
+                sales: [],
+                maintenance: []
+            });
+            
+            // إنشاء مستخدم للمركز في Authentication
+            await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, password);
+            
+            // إعادة تعيين الحقول
+            document.getElementById('new-center-name').value = '';
+            document.getElementById('new-center-password').value = '';
+            
+            // تحديث القوائم
+            await loadCentersFromFirebase();
+            
+            alert('تم إضافة المركز بنجاح!');
+        } catch (error) {
+            console.error('Error adding center:', error);
+            alert('حدث خطأ أثناء إضافة المركز');
+        }
+    }
+    
+    // حفظ بيانات المركز في Firebase
+    async function saveCenterData() {
+        if (!currentCenter) return;
+        
+        try {
+            await db.collection('centers').doc(currentCenter.id).update({
+                inventory: currentCenter.inventory,
+                sales: currentCenter.sales,
+                maintenance: currentCenter.maintenance
+            });
+            
+            // تحديث واجهة المستخدم
+            updateItemSelects();
+            updateItemsTable();
+            updateSalesTable();
+            updateMaintenanceTable();
+            updateInventorySummary();
+        } catch (error) {
+            console.error('Error saving center data:', error);
+            alert('حدث خطأ أثناء حفظ البيانات');
+        }
+    }
+    
+    // تسجيل الخروج من Firebase
+    function logout() {
+        auth.signOut().then(() => {
+            currentCenter = null;
+            isAdmin = false;
+            localStorage.removeItem('currentCenter');
+            localStorage.removeItem('userData');
+            
+            document.getElementById('login-page').style.display = 'block';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('admin-container').style.display = 'none';
+            
+            // مسح كلمة المرور
+            document.getElementById('password').value = '';
+        }).catch(error => {
+            console.error('Logout error:', error);
+        });
+    }
+    
+    // ... باقي الدوال تبقى كما هي مع استبدال localStorage بـ Firebase ...
+    
+    // تهيئة الصفحة عند التحميل
+    document.addEventListener('DOMContentLoaded', initializePage);
+</script>
+</body>
+</html>
