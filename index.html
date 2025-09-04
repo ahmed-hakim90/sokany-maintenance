@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة المخزون متعدد المراكز</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -347,6 +349,38 @@
             to { transform: rotate(360deg); }
         }
         
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .stat-card p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
         @media (max-width: 768px) {
             .tabs {
                 flex-direction: column;
@@ -368,6 +402,10 @@
             
             .export-options button {
                 width: 100%;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -399,9 +437,6 @@
             <input type="password" id="password" placeholder="أدخل كلمة المرور">
         </div>
         <button onclick="login()"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
-        <div style="margin-top: 20px; text-align: center;">
-            <p>كلمة مرور المركز الافتراضي (العاشر): 12345</p>
-        </div>
     </div>
 
     <div id="app-container" class="container" style="display: none;">
@@ -438,7 +473,7 @@
             <div class="tab active" onclick="switchTab('inventory-tab')"><i class="fas fa-box-open"></i> إدارة المخزون</div>
             <div class="tab" onclick="switchTab('sales-tab')"><i class="fas fa-shopping-cart"></i> عمليات البيع</div>
             <div class="tab" onclick="switchTab('maintenance-tab')"><i class="fas fa-tools"></i> طلبات الصيانة</div>
-            <div class="tab" onclick="switchTab('export-tab')"><i class="fas fa-file-export"></i> التصدير والاستيراد</div>
+            <div class="tab" onclick="switchTab('settings-tab')"><i class="fas fa-cog"></i> الإعدادات</div>
             <div class="tab" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
         </div>
         
@@ -493,6 +528,7 @@
                             <th>السعر</th>
                             <th>القيمة</th>
                             <th>ملاحظات</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -533,6 +569,8 @@
                             <th>التاريخ</th>
                             <th>الصنف</th>
                             <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>الإجمالي</th>
                             <th>اسم العميل</th>
                             <th>رقم التليفون</th>
                         </tr>
@@ -569,15 +607,10 @@
                     <input type="text" id="device-name" placeholder="أدخل اسم الجهاز">
                 </div>
                 <div class="form-group">
-                    <label for="under-warranty">في الضمان:</label>
-                    <select id="under-warranty">
-                        <option value="نعم">نعم</option>
-                        <option value="لا">لا</option>
+                    <label for="technician-select">الفني المسؤول:</label>
+                    <select id="technician-select">
+                        <option value="">-- اختر الفني --</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="technician-name">اسم الفني:</label>
-                    <input type="text" id="technician-name" placeholder="أدخل اسم الفني">
                 </div>
                 <div class="form-group">
                     <label for="maintenance-status">حالة طلب الصيانة:</label>
@@ -616,15 +649,26 @@
             </div>
         </div>
         
-        <div id="export-tab" class="tab-content">
+        <div id="settings-tab" class="tab-content">
             <div class="section">
-                <h2><i class="fas fa-file-export"></i> تصدير البيانات</h2>
-                <div class="export-options">
-                    <button class="export" onclick="exportData('all')"><i class="fas fa-download"></i> تصدير جميع البيانات</button>
-                    <button class="export" onclick="exportData('inventory')"><i class="fas fa-download"></i> تصدير الأصناف</button>
-                    <button class="export" onclick="exportData('sales')"><i class="fas fa-download"></i> تصدير عمليات البيع</button>
-                    <button class="export" onclick="exportData('maintenance')"><i class="fas fa-download"></i> تصدير طلبات الصيانة</button>
+                <h2><i class="fas fa-cog"></i> إعدادات المركز</h2>
+                <div class="form-group">
+                    <label for="settings-center-name">اسم المركز:</label>
+                    <input type="text" id="settings-center-name" placeholder="اسم المركز">
                 </div>
+                <div class="form-group">
+                    <label for="settings-center-email">البريد الإلكتروني:</label>
+                    <input type="email" id="settings-center-email" placeholder="البريد الإلكتروني">
+                </div>
+                <div class="form-group">
+                    <label for="settings-center-password">كلمة المرور الجديدة:</label>
+                    <input type="password" id="settings-center-password" placeholder="كلمة المرور الجديدة">
+                </div>
+                <div class="form-group">
+                    <label for="settings-confirm-password">تأكيد كلمة المرور:</label>
+                    <input type="password" id="settings-confirm-password" placeholder="تأكيد كلمة المرور">
+                </div>
+                <button onclick="updateCenterSettings()"><i class="fas fa-save"></i> حفظ الإعدادات</button>
             </div>
         </div>
     </div>
@@ -633,7 +677,9 @@
         <h1><i class="fas fa-user-cog"></i> لوحة تحكم المسؤول</h1>
         <div class="tabs">
             <div class="tab active" onclick="switchAdminTab('centers-tab')"><i class="fas fa-building"></i> إدارة المراكز</div>
+            <div class="tab" onclick="switchAdminTab('technicians-tab')"><i class="fas fa-user-cog"></i> إدارة الفنيين</div>
             <div class="tab" onclick="switchAdminTab('view-data-tab')"><i class="fas fa-database"></i> عرض بيانات المراكز</div>
+            <div class="tab" onclick="switchAdminTab('export-tab')"><i class="fas fa-file-export"></i> التصدير والاستيراد</div>
             <div class="tab" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
         </div>
         
@@ -661,7 +707,52 @@
                     <thead>
                         <tr>
                             <th>اسم المركز</th>
+                            <th>البريد الإلكتروني</th>
                             <th>كلمة المرور</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="technicians-tab" class="tab-content">
+            <div class="section">
+                <h2><i class="fas fa-users-cog"></i> إضافة فني جديد</h2>
+                <div class="form-group">
+                    <label for="technician-name">اسم الفني:</label>
+                    <input type="text" id="technician-name" placeholder="أدخل اسم الفني">
+                </div>
+                <div class="form-group">
+                    <label for="technician-phone">رقم الهاتف:</label>
+                    <input type="text" id="technician-phone" placeholder="أدخل رقم الهاتف">
+                </div>
+                <div class="form-group">
+                    <label for="technician-address">العنوان:</label>
+                    <textarea id="technician-address" placeholder="أدخل عنوان الفني"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="technician-centers">المراكز التي يعمل بها:</label>
+                    <select id="technician-centers" multiple>
+                        <option value="">-- اختر المراكز --</option>
+                    </select>
+                    <small>اضغط زر Ctrl لاختيار أكثر من مركز</small>
+                </div>
+                <button onclick="addTechnician()"><i class="fas fa-plus"></i> إضافة فني</button>
+            </div>
+            
+            <div class="section">
+                <h2><i class="fas fa-list"></i> جميع الفنيين في النظام</h2>
+                <table id="all-technicians-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الفني</th>
+                            <th>رقم الهاتف</th>
+                            <th>العنوان</th>
+                            <th>المراكز</th>
+                            <th>عدد أعمال الصيانة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
@@ -678,25 +769,44 @@
                     <label for="admin-center-select">اختر المركز:</label>
                     <select id="admin-center-select">
                         <option value="">-- اختر المركز --</option>
+                        <option value="all">جميع المراكز</option>
                     </select>
                 </div>
                 
-                <div class="admin-dashboard">
-                    <div class="admin-card">
-                        <h3>إحصائيات المخزون</h3>
-                        <p>إجمالي الأصناف: <span id="admin-total-items">0</span></p>
-                        <p>إجمالي الكمية: <span id="admin-total-quantity">0</span></p>
-                        <p>القيمة الإجمالية: <span id="admin-total-value">0</span> جنيه</p>
+                <div id="center-stats">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3><i class="fas fa-boxes"></i> إجمالي الأصناف</h3>
+                            <p id="admin-total-items">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fas fa-cubes"></i> إجمالي الكمية</h3>
+                            <p id="admin-total-quantity">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fas fa-money-bill-wave"></i> القيمة الإجمالية</h3>
+                            <p id="admin-total-value">0 جنيه</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fas fa-shopping-cart"></i> عمليات البيع</h3>
+                            <p id="admin-total-sales">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fas fa-tools"></i> طلبات الصيانة</h3>
+                            <p id="admin-total-maintenance">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><i class="fas fa-chart-line"></i> قيمة المبيعات</h3>
+                            <p id="admin-total-sales-value">0 جنيه</p>
+                        </div>
                     </div>
                     
-                    <div class="admin-card">
-                        <h3>إحصائيات المبيعات</h3>
-                        <p>إجمالي عمليات البيع: <span id="admin-total-sales">0</span></p>
+                    <div class="chart-container">
+                        <canvas id="sales-chart"></canvas>
                     </div>
                     
-                    <div class="admin-card">
-                        <h3>إحصائيات الصيانة</h3>
-                        <p>إجمالي طلبات الصيانة: <span id="admin-total-maintenance">0</span></p>
+                    <div class="chart-container">
+                        <canvas id="inventory-chart"></canvas>
                     </div>
                 </div>
                 
@@ -729,6 +839,8 @@
                                 <th>التاريخ</th>
                                 <th>الصنف</th>
                                 <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>الإجمالي</th>
                                 <th>اسم العميل</th>
                                 <th>رقم التليفون</th>
                             </tr>
@@ -757,19 +869,60 @@
                 </div>
             </div>
         </div>
+        
+       <div id="export-tab" class="tab-content">
+    <div class="section">
+        <h2><i class="fas fa-file-export"></i> تصدير البيانات</h2>
+        <div class="form-group">
+            <label for="export-scope">نطاق التصدير:</label>
+            <select id="export-scope">
+                <option value="all">جميع المراكز</option>
+                <option value="selected">المركز المحدد فقط</option>
+            </select>
+        </div>
+        <div class="export-options">
+            <button class="export" onclick="exportData('all')"><i class="fas fa-download"></i> تصدير جميع البيانات</button>
+            <button class="export" onclick="exportData('inventory')"><i class="fas fa-download"></i> تصدير الأصناف</button>
+            <button class="export" onclick="exportData('sales')"><i class="fas fa-download"></i> تصدير عمليات البيع</button>
+            <button class="export" onclick="exportData('maintenance')"><i class="fas fa-download"></i> تصدير طلبات الصيانة</button>
+        </div>
     </div>
+    
+    <div class="section">
+        <h2><i class="fas fa-file-import"></i> استيراد البيانات</h2>
+        <div class="form-group">
+            <label for="import-file">اختر ملف البيانات:</label>
+            <input type="file" id="import-file" accept=".json,.csv">
+        </div>
+        <div class="form-group">
+            <label for="import-type">نوع البيانات:</label>
+            <select id="import-type">
+                <option value="inventory">الأصناف</option>
+                <option value="sales">عمليات البيع</option>
+                <option value="maintenance">طلبات الصيانة</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="import-scope">نطاق الاستيراد:</label>
+            <select id="import-scope">
+                <option value="selected">المركز المحدد</option>
+                <option value="all">جميع المراكز (حسب البيانات)</option>
+            </select>
+        </div>
+        <button class="import" onclick="importData()"><i class="fas fa-upload"></i> استيراد البيانات</button>
+    </div>
+</div>
 
     <script>
         // تهيئة Firebase - استبدل هذه القيم ببيانات مشروعك من Firebase Console
-      
-   const firebaseConfig = {
-  apiKey: "AIzaSyA8THKyWr50bcGWOd7MHFpPqlBE4gvp6Hk",
-  authDomain: "main-maintenance.firebaseapp.com",
-  projectId: "main-maintenance",
-  storageBucket: "main-maintenance.appspot.com",  // تصحيح هنا
-  messagingSenderId: "806089947936",
-  appId: "1:806089947936:web:90af1597a0a8a558fe3545"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8THKyWr50bcGWOd7MHFpPqlBE4gvp6Hk",
+            authDomain: "main-maintenance.firebaseapp.com",
+            projectId: "main-maintenance",
+            storageBucket: "main-maintenance.appspot.com",
+            messagingSenderId: "806089947936",
+            appId: "1:806089947936:web:90af1597a0a8a558fe3545"
+        };
         
         // تهيئة Firebase
         if (!firebase.apps.length) {
@@ -780,6 +933,7 @@
         
         // بيانات التخزين
         let centers = [];
+        let technicians = [];
         let currentCenter = null;
         let isAdmin = false;
         const adminPassword = "admin123"; // كلمة مرور المسؤول الافتراضية
@@ -789,11 +943,17 @@
         const INVENTORY_COLLECTION = "inventory";
         const SALES_COLLECTION = "sales";
         const MAINTENANCE_COLLECTION = "maintenance";
+        const TECHNICIANS_COLLECTION = "technicians";
+        
+        // متغيرات للرسوم البيانية
+        let salesChart = null;
+        let inventoryChart = null;
         
         // تهيئة الصفحة
         function initializePage() {
             // تحميل بيانات المراكز من Firebase
             loadCentersFromFirebase();
+            loadTechniciansFromFirebase();
             
             // إذا كان هناك مركز مسجل مسبقاً، تخطي صفحة التسجيل
             const savedCenter = localStorage.getItem('currentCenter');
@@ -813,13 +973,9 @@
                     centers.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // إضافة المركز الافتراضي (العاشر) إذا لم يكن موجوداً
-                if (!centers.some(c => c.name === "العاشر")) {
-                    await addDefaultCenter();
-                }
-                
                 // تحديث واجهة المستخدم
                 updateCenterSelects();
+                updateTechnicianCenterSelect();
                 showNotification('تم تحميل البيانات بنجاح', 'success');
             } catch (error) {
                 console.error('Error loading centers:', error);
@@ -827,27 +983,21 @@
             }
         }
         
-        // إضافة المركز الافتراضي (العاشر)
-        async function addDefaultCenter() {
+        // تحميل الفنيين من Firebase
+        async function loadTechniciansFromFirebase() {
             try {
-                const defaultCenter = {
-                    name: "العاشر",
-                    password: "12345",
-                    inventory: [],
-                    sales: [],
-                    maintenance: []
-                };
+                const snapshot = await db.collection(TECHNICIANS_COLLECTION).get();
+                technicians = [];
+                snapshot.forEach(doc => {
+                    technicians.push({ id: doc.id, ...doc.data() });
+                });
                 
-                const docRef = await db.collection(CENTERS_COLLECTION).add(defaultCenter);
-                centers.push({ id: docRef.id, ...defaultCenter });
-                
-                // إنشاء مستخدم للمركز في Authentication
-                await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, "12345");
-                
-                showNotification('تم إضافة المركز الافتراضي (العاشر) بنجاح', 'success');
+                // تحديث واجهة المستخدم
+                updateTechnicianSelects();
+                updateAllTechniciansTable();
             } catch (error) {
-                console.error('Error adding default center:', error);
-                showNotification('حدث خطأ أثناء إضافة المركز الافتراضي', 'error');
+                console.error('Error loading technicians:', error);
+                showNotification('حدث خطأ في تحميل بيانات الفنيين', 'error');
             }
         }
         
@@ -858,7 +1008,7 @@
             
             // مسح القوائم الحالية
             centerSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
-            adminCenterSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
+            adminCenterSelect.innerHTML = '<option value="">-- اختر المركز --</option><option value="all">جميع المراكز</option>';
             
             // إضافة خيار لوحة المسؤول
             const adminOption = document.createElement('option');
@@ -877,7 +1027,39 @@
             });
             
             // تحديث جدول المراكز في لوحة المسؤول
-            updateCentersTable();
+            // updateCentersTable();
+        }
+        
+        // تحديث قائمة المراكز للفنيين
+        function updateTechnicianCenterSelect() {
+            const technicianCenters = document.getElementById('technician-centers');
+            
+            // مسح القائمة الحالية
+            technicianCenters.innerHTML = '<option value="">-- اختر المراكز --</option>';
+            
+            // إضافة المراكز إلى القائمة
+            centers.forEach(center => {
+                const option = document.createElement('option');
+                option.value = center.id;
+                option.textContent = center.name;
+                technicianCenters.appendChild(option);
+            });
+        }
+        
+        // تحديث قوائم اختيار الفنيين
+        function updateTechnicianSelects() {
+            const technicianSelect = document.getElementById('technician-select');
+            
+            // مسح القائمة الحالية
+            technicianSelect.innerHTML = '<option value="">-- اختر الفني --</option>';
+            
+            // إضافة الفنيين إلى القائمة
+            technicians.forEach(tech => {
+                const option = document.createElement('option');
+                option.value = tech.id;
+                option.textContent = tech.name;
+                technicianSelect.appendChild(option);
+            });
         }
         
         // تحميل بيانات مركز من Firebase
@@ -899,7 +1081,7 @@
             }
         }
         
-        // تسجيل الدخول مع Firebase Authentication
+        // تسجيل الدخول
         async function login() {
             const centerSelect = document.getElementById('center-select');
             const emailInput = document.getElementById('email');
@@ -943,43 +1125,41 @@
                     return;
                 }
                 
-                if (center.password !== password) {
-                    showNotification('كلمة المرور غير صحيحة', 'error');
+                if (center.email !== email || center.password !== password) {
+                    showNotification('البريد الإلكتروني أو كلمة المرور غير صحيحة', 'error');
                     return;
                 }
                 
-                try {
-                    // محاولة تسجيل الدخول
-                    const userCredential = await auth.signInWithEmailAndPassword(`${center.id}@center.com`, password);
-                    const user = userCredential.user;
-                } catch (authError) {
-                    // إذا لم يكن المستخدم موجوداً، قم بإنشائه
-                    if (authError.code === 'auth/user-not-found') {
-                        try {
-                            await auth.createUserWithEmailAndPassword(`${center.id}@center.com`, password);
-                            showNotification('تم إنشاء حساب المستخدم بنجاح', 'success');
-                        } catch (createError) {
-                            console.error('Error creating user:', createError);
-                            showNotification('خطأ في إنشاء المستخدم', 'error');
-                            return;
-                        }
-                    } else {
-                        throw authError;
-                    }
-                }
-                
-                if (user) {
-                    localStorage.setItem('userData', JSON.stringify({ 
-                        centerId: center.id, 
-                        isAdmin: false 
-                    }));
-                    loadCenterFromFirebase(center.id);
-                }
+                loadCenterFromFirebase(center.id);
             } catch (error) {
                 console.error('Login error:', error);
-                showNotification('كلمة المرور غير صحيحة', 'error');
+                showNotification('حدث خطأ أثناء تسجيل الدخول', 'error');
             }
         }
+        // تسجيل الخروج
+async function logout() {
+    try {
+        await auth.signOut();
+        currentCenter = null;
+        isAdmin = false;
+        localStorage.removeItem('currentCenter');
+        localStorage.removeItem('userData');
+        
+        document.getElementById('login-page').style.display = 'block';
+        document.getElementById('app-container').style.display = 'none';
+        document.getElementById('admin-container').style.display = 'none';
+        
+        // إعادة تعيين الحقول
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('center-select').selectedIndex = 0;
+        
+        showNotification('تم تسجيل الخروج بنجاح', 'success');
+    } catch (error) {
+        console.error('Logout error:', error);
+        showNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
+    }
+}
         
         // إضافة مركز جديد إلى Firebase
         async function addNewCenter() {
@@ -987,7 +1167,7 @@
             const email = document.getElementById('new-center-email').value.trim();
             const password = document.getElementById('new-center-password').value;
             
-            if (!name || !password) {
+            if (!name || !email || !password) {
                 showNotification('يرجى ملء جميع الحقول', 'error');
                 return;
             }
@@ -1003,17 +1183,16 @@
                 // إضافة مركز إلى Firestore
                 const docRef = await db.collection(CENTERS_COLLECTION).add({
                     name: name,
+                    email: email,
                     password: password,
                     inventory: [],
                     sales: [],
                     maintenance: []
                 });
                 
-                // إنشاء مستخدم للمركز في Authentication
-                await auth.createUserWithEmailAndPassword(`${docRef.id}@center.com`, password);
-                
                 // إعادة تعيين الحقول
                 document.getElementById('new-center-name').value = '';
+                document.getElementById('new-center-email').value = '';
                 document.getElementById('new-center-password').value = '';
                 
                 // تحديث القوائم
@@ -1026,54 +1205,820 @@
             }
         }
         
-        // حفظ بيانات المركز في Firebase
-        async function saveCenterData() {
-            if (!currentCenter) return;
+        // إضافة فني جديد
+        async function addTechnician() {
+            const name = document.getElementById('technician-name').value.trim();
+            const phone = document.getElementById('technician-phone').value.trim();
+            const address = document.getElementById('technician-address').value.trim();
+            const centersSelect = document.getElementById('technician-centers');
+            const selectedCenters = Array.from(centersSelect.selectedOptions).map(option => option.value);
+            const centerNames = Array.from(centersSelect.selectedOptions).map(option => option.text);
+            
+            if (!name || !phone) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
             
             try {
-                showNotification('جاري حفظ البيانات...', 'success');
-                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id).update({
-                    inventory: currentCenter.inventory,
-                    sales: currentCenter.sales,
-                    maintenance: currentCenter.maintenance
-                });
+                const technicianData = {
+                    name: name,
+                    phone: phone,
+                    address: address,
+                    centerIds: selectedCenters,
+                    centerNames: centerNames,
+                    maintenanceCount: 0
+                };
                 
-                // تحديث واجهة المستخدم
-                updateItemSelects();
-                updateItemsTable();
-                updateSalesTable();
-                updateMaintenanceTable();
-                updateInventorySummary();
+                // إضافة الفني إلى Firestore
+                await db.collection(TECHNICIANS_COLLECTION).add(technicianData);
                 
-                showNotification('تم حفظ البيانات بنجاح', 'success');
+                showNotification('تم إضافة الفني بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('technician-name').value = '';
+                document.getElementById('technician-phone').value = '';
+                document.getElementById('technician-address').value = '';
+                centersSelect.selectedIndex = -1;
+                
+                // تحديث البيانات
+                await loadTechniciansFromFirebase();
             } catch (error) {
-                console.error('Error saving center data:', error);
-                showNotification('حدث خطأ أثناء حفظ البيانات', 'error');
+                console.error('Error adding technician:', error);
+                showNotification('حدث خطأ أثناء إضافة الفني', 'error');
             }
         }
         
-        // تسجيل الخروج من Firebase
-        function logout() {
-            auth.signOut().then(() => {
-                currentCenter = null;
-                isAdmin = false;
-                localStorage.removeItem('currentCenter');
-                localStorage.removeItem('userData');
+        // تحديث إعدادات المركز
+        async function updateCenterSettings() {
+            if (!currentCenter) return;
+            
+            const name = document.getElementById('settings-center-name').value.trim();
+            const email = document.getElementById('settings-center-email').value.trim();
+            const password = document.getElementById('settings-center-password').value;
+            const confirmPassword = document.getElementById('settings-confirm-password').value;
+            
+            if (!name || !email) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            if (password && password !== confirmPassword) {
+                showNotification('كلمة المرور غير متطابقة', 'error');
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    name: name,
+                    email: email
+                };
                 
-                document.getElementById('login-page').style.display = 'block';
-                document.getElementById('app-container').style.display = 'none';
-                document.getElementById('admin-container').style.display = 'none';
+                if (password) {
+                    updateData.password = password;
+                }
                 
-                // مسح كلمة المرور
-                document.getElementById('password').value = '';
+                // تحديث بيانات المركز في Firestore
+                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id).update(updateData);
                 
-                showNotification('تم تسجيل الخروج بنجاح', 'success');
-            }).catch(error => {
-                console.error('Logout error:', error);
-                showNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
+                // تحديث البيانات المحلية
+                currentCenter.name = name;
+                currentCenter.email = email;
+                if (password) {
+                    currentCenter.password = password;
+                }
+                
+                localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                
+                // تحديث واجهة المستخدم
+                document.getElementById('center-header').textContent = currentCenter.name;
+                
+                showNotification('تم تحديث إعدادات المركز بنجاح', 'success');
+            } catch (error) {
+                console.error('Error updating center settings:', error);
+                showNotification('حدث خطأ أثناء تحديث الإعدادات', 'error');
+            }
+        }
+        
+        // تحميل بيانات الإعدادات
+        function loadSettingsData() {
+            if (!currentCenter) return;
+            
+            document.getElementById('settings-center-name').value = currentCenter.name || '';
+            document.getElementById('settings-center-email').value = currentCenter.email || '';
+            document.getElementById('settings-center-password').value = '';
+            document.getElementById('settings-confirm-password').value = '';
+        }
+        
+        // تحديث جدول جميع الفنيين (للمسؤول)
+        function updateAllTechniciansTable() {
+            const tbody = document.querySelector('#all-technicians-table tbody');
+            tbody.innerHTML = '';
+            
+            technicians.forEach(tech => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${tech.name}</td>
+                    <td>${tech.phone}</td>
+                    <td>${tech.address || ''}</td>
+                    <td>${tech.centerNames ? tech.centerNames.join(', ') : ''}</td>
+                    <td>${tech.maintenanceCount || 0}</td>
+                    <td class="action-buttons">
+                        <button class="delete" onclick="deleteTechnician('${tech.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
             });
         }
         
+        // حذف فني
+        async function deleteTechnician(technicianId) {
+            if (!confirm('هل أنت متأكد من حذف هذا الفني؟')) {
+                return;
+            }
+            
+            try {
+                // حذف الفني من Firestore
+                await db.collection(TECHNICIANS_COLLECTION).doc(technicianId).delete();
+                
+                // تحديث البيانات
+                await loadTechniciansFromFirebase();
+                
+                showNotification('تم حذف الفني بنجاح', 'success');
+            } catch (error) {
+                console.error('Error deleting technician:', error);
+                showNotification('حدث خطأ أثناء حذف الفني', 'error');
+            }
+        }
+        
+        // تحميل بيانات مركز للمسؤول
+        async function loadCenterDataForAdmin(centerId) {
+            try {
+                let totalItems = 0;
+                let totalQuantity = 0;
+                let totalValue = 0;
+                let totalSales = 0;
+                let totalSalesValue = 0;
+                let totalMaintenance = 0;
+                
+                let inventoryData = [];
+                let salesData = [];
+                let maintenanceData = [];
+                
+                if (centerId === "all") {
+                    // تحميل بيانات جميع المراكز
+                    for (const center of centers) {
+                        const inventorySnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(INVENTORY_COLLECTION).get();
+                        const salesSnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(SALES_COLLECTION).get();
+                        const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(MAINTENANCE_COLLECTION).get();
+                        
+                        totalItems += inventorySnapshot.size;
+                        totalQuantity += inventorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().quantity || 0), 0);
+                        totalValue += inventorySnapshot.docs.reduce((sum, doc) => {
+                            const item = doc.data();
+                            return sum + (item.quantity * item.price || 0);
+                        }, 0);
+                        
+                        totalSales += salesSnapshot.size;
+                        totalSalesValue += salesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalPrice || 0), 0);
+                        totalMaintenance += maintenanceSnapshot.size;
+                        
+                        // جمع البيانات للعرض في الجداول
+                        inventorySnapshot.forEach(doc => {
+                            inventoryData.push({ ...doc.data(), center: center.name });
+                        });
+                        
+                        salesSnapshot.forEach(doc => {
+                            salesData.push({ ...doc.data(), center: center.name });
+                        });
+                        
+                        maintenanceSnapshot.forEach(doc => {
+                            maintenanceData.push({ ...doc.data(), center: center.name });
+                        });
+                    }
+                } else {
+                    // تحميل بيانات مركز محدد
+                    const centerDoc = await db.collection(CENTERS_COLLECTION).doc(centerId).get();
+                    if (!centerDoc.exists) {
+                        showNotification('المركز غير موجود', 'error');
+                        return;
+                    }
+                    
+                    const inventorySnapshot = await db.collection(CENTERS_COLLECTION).doc(centerId).collection(INVENTORY_COLLECTION).get();
+                    const salesSnapshot = await db.collection(CENTERS_COLLECTION).doc(centerId).collection(SALES_COLLECTION).get();
+                    const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION).doc(centerId).collection(MAINTENANCE_COLLECTION).get();
+                    
+                    totalItems = inventorySnapshot.size;
+                    totalQuantity = inventorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().quantity || 0), 0);
+                    totalValue = inventorySnapshot.docs.reduce((sum, doc) => {
+                        const item = doc.data();
+                        return sum + (item.quantity * item.price || 0);
+                    }, 0);
+                    
+                    totalSales = salesSnapshot.size;
+                    totalSalesValue = salesSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalPrice || 0), 0);
+                    totalMaintenance = maintenanceSnapshot.size;
+                    
+                    // جمع البيانات للعرض في الجداول
+                    inventorySnapshot.forEach(doc => {
+                        inventoryData.push(doc.data());
+                    });
+                    
+                    salesSnapshot.forEach(doc => {
+                        salesData.push(doc.data());
+                    });
+                    
+                    maintenanceSnapshot.forEach(doc => {
+                        maintenanceData.push(doc.data());
+                    });
+                }
+                
+                // تحديث الإحصائيات
+                document.getElementById('admin-total-items').textContent = totalItems;
+                document.getElementById('admin-total-quantity').textContent = totalQuantity;
+                document.getElementById('admin-total-value').textContent = totalValue.toFixed(2);
+                document.getElementById('admin-total-sales').textContent = totalSales;
+                document.getElementById('admin-total-sales-value').textContent = totalSalesValue.toFixed(2);
+                document.getElementById('admin-total-maintenance').textContent = totalMaintenance;
+                
+                // تحديث الرسوم البيانية
+                updateCharts(salesData, inventoryData);
+                
+                // تحديث جدول المخزون
+                const inventoryTbody = document.querySelector('#admin-items-table tbody');
+                inventoryTbody.innerHTML = '';
+                
+                inventoryData.forEach(item => {
+                    const value = item.quantity * item.price;
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${item.name} ${item.center ? `(${item.center})` : ''}</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.price.toFixed(2)} جنيه</td>
+                        <td>${value.toFixed(2)} جنيه</td>
+                        <td>${item.note || ''}</td>
+                    `;
+                    
+                    inventoryTbody.appendChild(row);
+                });
+                
+                // تحديث جدول المبيعات
+                const salesTbody = document.querySelector('#admin-sales-table tbody');
+                salesTbody.innerHTML = '';
+                
+                salesData.forEach(sale => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${new Date(sale.date).toLocaleString('ar-EG')}</td>
+                        <td>${sale.itemName} ${sale.center ? `(${sale.center})` : ''}</td>
+                        <td>${sale.quantity}</td>
+                        <td>${sale.unitPrice.toFixed(2)} جنيه</td>
+                        <td>${sale.totalPrice.toFixed(2)} جنيه</td>
+                        <td>${sale.customerName}</td>
+                        <td>${sale.customerPhone}</td>
+                    `;
+                    
+                    salesTbody.appendChild(row);
+                });
+                
+                // تحديث جدول الصيانة
+                const maintenanceTbody = document.querySelector('#admin-maintenance-table tbody');
+                maintenanceTbody.innerHTML = '';
+                
+                maintenanceData.forEach(maintenance => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${new Date(maintenance.date).toLocaleString('ar-EG')}</td>
+                        <td>${maintenance.itemName} ${maintenance.center ? `(${maintenance.center})` : ''}</td>
+                        <td>${maintenance.quantity}</td>
+                        <td>${maintenance.customerName}<br>${maintenance.customerPhone}</td>
+                        <td>${maintenance.deviceName}</td>
+                        <td>${maintenance.technicianName}</td>
+                        <td>${maintenance.status}</td>
+                    `;
+                    
+                    maintenanceTbody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Error loading center data for admin:', error);
+                showNotification('حدث خطأ في تحميل بيانات المركز', 'error');
+            }
+        }
+        
+        // تحديث الرسوم البيانية
+        function updateCharts(salesData, inventoryData) {
+            // تدمير الرسوم البيانية الحالية إذا كانت موجودة
+            if (salesChart) {
+                salesChart.destroy();
+            }
+            if (inventoryChart) {
+                inventoryChart.destroy();
+            }
+            
+            // تحضير بيانات المبيعات للرسم البياني
+            const salesByDate = {};
+            salesData.forEach(sale => {
+                const date = new Date(sale.date).toLocaleDateString('ar-EG');
+                salesByDate[date] = (salesByDate[date] || 0) + sale.totalPrice;
+            });
+            
+            const salesDates = Object.keys(salesByDate);
+            const salesValues = Object.values(salesByDate);
+            
+            // رسم بياني للمبيعات
+            const salesCtx = document.getElementById('sales-chart').getContext('2d');
+            salesChart = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: salesDates,
+                    datasets: [{
+                        label: 'قيمة المبيعات بالجنيه',
+                        data: salesValues,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'تطور المبيعات يومياً',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'قيمة المبيعات (جنيه)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'التاريخ'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // تحضير بيانات المخزون للرسم البياني
+            const inventoryValues = inventoryData.map(item => item.quantity * item.price);
+            const inventoryNames = inventoryData.map(item => item.name);
+            
+            // رسم بياني للمخزون
+            const inventoryCtx = document.getElementById('inventory-chart').getContext('2d');
+            inventoryChart = new Chart(inventoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: inventoryNames,
+                    datasets: [{
+                        label: 'قيمة المخزون بالجنيه',
+                        data: inventoryValues,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'قيمة الأصناف في المخزون',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'القيمة (جنيه)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'الأصناف'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // إضافة صنف جديد
+        async function addNewItem() {
+            if (!currentCenter) return;
+            
+            const name = document.getElementById('item-name').value.trim();
+            const quantity = parseInt(document.getElementById('initial-quantity').value);
+            const price = parseFloat(document.getElementById('item-price').value);
+            const note = document.getElementById('item-note').value.trim();
+            
+            if (!name || isNaN(quantity) || quantity < 0 || isNaN(price) || price < 0) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة بشكل صحيح', 'error');
+                return;
+            }
+            
+            try {
+                // التحقق من عدم وجود صنف بنفس الاسم
+                const existingItems = await db.collection(CENTERS_COLLECTION)
+                    .doc(currentCenter.id)
+                    .collection(INVENTORY_COLLECTION)
+                    .where('name', '==', name)
+                    .get();
+                
+                if (!existingItems.empty) {
+                    showNotification('يوجد بالفعل صنف بنفس الاسم', 'error');
+                    return;
+                }
+                
+                const newItem = {
+                    id: Date.now().toString(),
+                    name: name,
+                    quantity: quantity,
+                    price: price,
+                    note: note,
+                    createdAt: new Date(),
+                    lastUpdated: new Date()
+                };
+                
+                // إضافة الصنف إلى Firestore
+                await db.collection(CENTERS_COLLECTION)
+                    .doc(currentCenter.id)
+                    .collection(INVENTORY_COLLECTION)
+                    .doc(newItem.id)
+                    .set(newItem);
+                
+                showNotification('تم إضافة الصنف بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('item-name').value = '';
+                document.getElementById('initial-quantity').value = '';
+                document.getElementById('item-price').value = '';
+                document.getElementById('item-note').value = '';
+                
+                // تحديث البيانات
+                await loadCenterFromFirebase(currentCenter.id);
+                
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showNotification('حدث خطأ أثناء إضافة الصنف', 'error');
+            }
+        }
+        
+        // إضافة إلى المخزون
+        async function addToInventory() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('add-item').value;
+            const quantity = parseInt(document.getElementById('add-quantity').value);
+            const note = document.getElementById('add-note').value.trim();
+            
+            if (!itemId || isNaN(quantity) || quantity <= 0) {
+                showNotification('يرجى اختيار صنف وإدخال كمية صحيحة', 'error');
+                return;
+            }
+            
+            try {
+                // استخدام المعاملة لضمان التحديث الآمن
+                await db.runTransaction(async (transaction) => {
+                    const itemRef = db.collection(CENTERS_COLLECTION)
+                        .doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION)
+                        .doc(itemId);
+                    
+                    const itemDoc = await transaction.get(itemRef);
+                    if (!itemDoc.exists) {
+                        throw new Error('الصنف غير موجود');
+                    }
+                    
+                    const currentQuantity = itemDoc.data().quantity || 0;
+                    const newQuantity = currentQuantity + quantity;
+                    
+                    transaction.update(itemRef, {
+                        quantity: newQuantity,
+                        lastUpdated: new Date()
+                    });
+                });
+                
+                // تسجيل عملية الإضافة في السجل
+                const addRecord = {
+                    itemId: itemId,
+                    quantity: quantity,
+                    note: note,
+                    date: new Date(),
+                    type: 'add'
+                };
+                
+                await db.collection(CENTERS_COLLECTION)
+                    .doc(currentCenter.id)
+                    .collection('inventoryLogs')
+                    .add(addRecord);
+                
+                showNotification('تمت إضافة الكمية إلى المخزون بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('add-item').value = '';
+                document.getElementById('add-quantity').value = '';
+                document.getElementById('add-note').value = '';
+                
+                // تحديث البيانات
+                await loadCenterFromFirebase(currentCenter.id);
+                
+            } catch (error) {
+                console.error('Error adding to inventory:', error);
+                showNotification('حدث خطأ أثناء إضافة الكمية إلى المخزون', 'error');
+            }
+        }
+        
+        // تسجيل عملية بيع
+        async function recordSale() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('sale-item').value;
+            const quantity = parseInt(document.getElementById('sale-quantity').value);
+            const customerName = document.getElementById('customer-name').value.trim();
+            const customerPhone = document.getElementById('customer-phone').value.trim();
+            
+            if (!itemId || isNaN(quantity) || quantity <= 0 || !customerName) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة بشكل صحيح', 'error');
+                return;
+            }
+            
+            try {
+                // استخدام المعاملة لضمان التحديث الآمن
+                await db.runTransaction(async (transaction) => {
+                    const itemRef = db.collection(CENTERS_COLLECTION)
+                        .doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION)
+                        .doc(itemId);
+                    
+                    const itemDoc = await transaction.get(itemRef);
+                    if (!itemDoc.exists) {
+                        throw new Error('الصنف غير موجود');
+                    }
+                    
+                    const item = itemDoc.data();
+                    if (item.quantity < quantity) {
+                        throw new Error('الكمية المتاحة غير كافية');
+                    }
+                    
+                    const newQuantity = item.quantity - quantity;
+                    
+                    transaction.update(itemRef, {
+                        quantity: newQuantity,
+                        lastUpdated: new Date()
+                    });
+                    
+                    // تسجيل عملية البيع
+                    const saleRecord = {
+                        itemId: itemId,
+                        itemName: item.name,
+                        quantity: quantity,
+                        unitPrice: item.price,
+                        totalPrice: quantity * item.price,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        date: new Date()
+                    };
+                    
+                    transaction.set(
+                        db.collection(CENTERS_COLLECTION)
+                            .doc(currentCenter.id)
+                            .collection(SALES_COLLECTION)
+                            .doc(),
+                        saleRecord
+                    );
+                });
+                
+                showNotification('تم تسجيل عملية البيع بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('sale-item').value = '';
+                document.getElementById('sale-quantity').value = '';
+                document.getElementById('customer-name').value = '';
+                document.getElementById('customer-phone').value = '';
+                
+                // تحديث البيانات
+                await loadCenterFromFirebase(currentCenter.id);
+                
+            } catch (error) {
+                console.error('Error recording sale:', error);
+                showNotification(error.message || 'حدث خطأ أثناء تسجيل عملية البيع', 'error');
+            }
+        }
+        
+        // تسجيل عملية صيانة
+        async function recordMaintenance() {
+            if (!currentCenter) return;
+            
+            const itemId = document.getElementById('maintenance-item').value;
+            const quantity = parseInt(document.getElementById('maintenance-quantity').value);
+            const customerName = document.getElementById('maintenance-customer-name').value.trim();
+            const customerPhone = document.getElementById('maintenance-customer-phone').value.trim();
+            const deviceName = document.getElementById('device-name').value.trim();
+            const technicianId = document.getElementById('technician-select').value;
+            const status = document.getElementById('maintenance-status').value;
+            const note = document.getElementById('maintenance-note').value.trim();
+            
+            if (!itemId || isNaN(quantity) || quantity <= 0 || !customerName || !deviceName || !technicianId) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة بشكل صحيح', 'error');
+                return;
+            }
+            
+            try {
+                const technician = technicians.find(t => t.id === technicianId);
+                if (!technician) {
+                    showNotification('الفني غير موجود', 'error');
+                    return;
+                }
+                
+                // استخدام المعاملة لضمان التحديث الآمن
+                await db.runTransaction(async (transaction) => {
+                    const itemRef = db.collection(CENTERS_COLLECTION)
+                        .doc(currentCenter.id)
+                        .collection(INVENTORY_COLLECTION)
+                        .doc(itemId);
+                    
+                    const itemDoc = await transaction.get(itemRef);
+                    if (!itemDoc.exists) {
+                        throw new Error('الصنف غير موجود');
+                    }
+                    
+                    const item = itemDoc.data();
+                    if (item.quantity < quantity) {
+                        throw new Error('الكمية المتاحة غير كافية');
+                    }
+                    
+                    const newQuantity = item.quantity - quantity;
+                    
+                    transaction.update(itemRef, {
+                        quantity: newQuantity,
+                        lastUpdated: new Date()
+                    });
+                    
+                    // تسجيل عملية الصيانة
+                    const maintenanceRecord = {
+                        itemId: itemId,
+                        itemName: item.name,
+                        quantity: quantity,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        deviceName: deviceName,
+                        technicianId: technicianId,
+                        technicianName: technician.name,
+                        status: status,
+                        note: note,
+                        date: new Date()
+                    };
+                    
+                    transaction.set(
+                        db.collection(CENTERS_COLLECTION)
+                            .doc(currentCenter.id)
+                            .collection(MAINTENANCE_COLLECTION)
+                            .doc(),
+                        maintenanceRecord
+                    );
+                    
+                    // تحديث عدد أعمال الصيانة للفني
+                    const techRef = db.collection(TECHNICIANS_COLLECTION).doc(technicianId);
+                    transaction.update(techRef, {
+                        maintenanceCount: firebase.firestore.FieldValue.increment(1),
+                        lastUpdated: new Date()
+                    });
+                });
+                
+                showNotification('تم تسجيل عملية الصيانة بنجاح', 'success');
+                
+                // إعادة تعيين الحقول
+                document.getElementById('maintenance-item').value = '';
+                document.getElementById('maintenance-quantity').value = '';
+                document.getElementById('maintenance-customer-name').value = '';
+                document.getElementById('maintenance-customer-phone').value = '';
+                document.getElementById('device-name').value = '';
+                document.getElementById('technician-select').value = '';
+                document.getElementById('maintenance-note').value = '';
+                
+                // تحديث البيانات
+                await loadCenterFromFirebase(currentCenter.id);
+                await loadTechniciansFromFirebase();
+                
+            } catch (error) {
+                console.error('Error recording maintenance:', error);
+                showNotification(error.message || 'حدث خطأ أثناء تسجيل عملية الصيانة', 'error');
+            }
+        }
+        
+       // تصدير البيانات
+async function exportData(type) {
+    try {
+        showNotification('جاري تصدير البيانات...', 'success');
+        
+        const exportScope = document.getElementById('export-scope').value;
+        const selectedCenterId = document.getElementById('admin-center-select').value;
+        
+        let dataToExport = {
+            exportDate: new Date().toISOString(),
+            dataType: type,
+            exportScope: exportScope
+        };
+        
+        // تحديد المراكز التي سيتم تصدير بياناتها
+        let centersToExport = [];
+        if (exportScope === 'selected' && selectedCenterId && selectedCenterId !== 'all') {
+            const center = centers.find(c => c.id === selectedCenterId);
+            if (center) {
+                centersToExport = [center];
+                dataToExport.centerId = center.id;
+                dataToExport.centerName = center.name;
+            }
+        } else {
+            centersToExport = centers;
+            dataToExport.centers = centers.map(c => ({ id: c.id, name: c.name }));
+        }
+        
+        if (type === 'all' || type === 'inventory') {
+            // تصدير المخزون
+            dataToExport.inventory = [];
+            for (const center of centersToExport) {
+                const inventorySnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(INVENTORY_COLLECTION).get();
+                const centerInventory = inventorySnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    centerId: center.id,
+                    centerName: center.name
+                }));
+                dataToExport.inventory = dataToExport.inventory.concat(centerInventory);
+            }
+        }
+        
+        if (type === 'all' || type === 'sales') {
+            // تصدير المبيعات
+            dataToExport.sales = [];
+            for (const center of centersToExport) {
+                const salesSnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(SALES_COLLECTION).get();
+                const centerSales = salesSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    centerId: center.id,
+                    centerName: center.name
+                }));
+                dataToExport.sales = dataToExport.sales.concat(centerSales);
+            }
+        }
+        
+        if (type === 'all' || type === 'maintenance') {
+            // تصدير الصيانة
+            dataToExport.maintenance = [];
+            for (const center of centersToExport) {
+                const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION).doc(center.id).collection(MAINTENANCE_COLLECTION).get();
+                const centerMaintenance = maintenanceSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    centerId: center.id,
+                    centerName: center.name
+                }));
+                dataToExport.maintenance = dataToExport.maintenance.concat(centerMaintenance);
+            }
+        }
+        
+        // تحويل البيانات إلى JSON
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        // إنشاء عنصر تحميل
+        const exportFileDefaultName = `export_${type}_${new Date().toISOString().split('T')[0]}.json`;
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        showNotification(`تم تصدير بيانات ${type} بنجاح`, 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showNotification('حدث خطأ أثناء تصدير البيانات', 'error');
+    }
+}
         // التبديل بين علامات التبويب
         function switchTab(tabId) {
             // إخفاء جميع محتويات علامات التبويب
@@ -1091,6 +2036,11 @@
             
             // تفعيل زر علامة التبويب المحددة
             document.querySelector(`#app-container .tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            
+            // إذا كانت علامة التبويب هي الإعدادات، تحميل البيانات
+            if (tabId === 'settings-tab') {
+                loadSettingsData();
+            }
         }
         
         // التبديل بين علامات التبويب في لوحة المسؤول
@@ -1110,6 +2060,16 @@
             
             // تفعيل زر علامة التبويب المحددة
             document.querySelector(`#admin-container .tab[onclick="switchAdminTab('${tabId}')"]`).classList.add('active');
+            
+            // إذا كانت علامة التبويب هي الفنيين، تحميل البيانات
+            if (tabId === 'technicians-tab') {
+                updateAllTechniciansTable();
+            }
+            
+            // إذا كانت علامة التبويب هي عرض البيانات، تحميل البيانات لجميع المراكز
+            if (tabId === 'view-data-tab') {
+                loadCenterDataForAdmin('all');
+            }
         }
         
         // التبديل بين علامات التبويب في بيانات المركز
@@ -1129,400 +2089,6 @@
             
             // تفعيل زر علامة التبويب المحددة
             document.querySelector(`#view-data-tab .tab[onclick="switchCenterDataTab('${tabId}')"]`).classList.add('active');
-            
-            // تحميل بيانات علامة التبويب المحددة
-            const centerId = document.getElementById('admin-center-select').value;
-            if (centerId) {
-                loadCenterDataForAdmin(centerId);
-            }
-        }
-        
-        // إضافة صنف جديد
-        async function addNewItem() {
-            if (!currentCenter) return;
-            
-            const name = document.getElementById('item-name').value.trim();
-            const quantity = parseInt(document.getElementById('initial-quantity').value);
-            const price = parseFloat(document.getElementById('item-price').value);
-            const note = document.getElementById('item-note').value.trim();
-            
-            if (!name || isNaN(quantity) || isNaN(price)) {
-                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
-                return;
-            }
-            
-            const newItem = {
-                id: Date.now(),
-                name: name,
-                quantity: quantity,
-                price: price,
-                note: note,
-                createdAt: new Date()
-            };
-            
-            try {
-                // إضافة الصنف إلى Firestore
-                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                    .collection(INVENTORY_COLLECTION).add(newItem);
-                
-                // تحديث البيانات المحلية
-                currentCenter.inventory.push(newItem);
-                await saveCenterData();
-                
-                showNotification('تم إضافة الصنف بنجاح', 'success');
-                
-                // إعادة تعيين الحقول
-                document.getElementById('item-name').value = '';
-                document.getElementById('initial-quantity').value = '';
-                document.getElementById('item-price').value = '';
-                document.getElementById('item-note').value = '';
-            } catch (error) {
-                console.error('Error adding item:', error);
-                showNotification('حدث خطأ أثناء إضافة الصنف', 'error');
-            }
-        }
-        
-        // إضافة إلى المخزون
-        async function addToInventory() {
-            if (!currentCenter) return;
-            
-            const itemId = document.getElementById('add-item').value;
-            const quantity = parseInt(document.getElementById('add-quantity').value);
-            const note = document.getElementById('add-note').value.trim();
-            
-            if (!itemId || isNaN(quantity)) {
-                showNotification('يرجى اختيار صنف وإدخال الكمية', 'error');
-                return;
-            }
-            
-            try {
-                const item = currentCenter.inventory.find(i => i.id == itemId);
-                if (item) {
-                    // تحديث كمية الصنف في Firestore
-                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
-                            quantity: firebase.firestore.FieldValue.increment(quantity)
-                        });
-                    
-                    // تحديث البيانات المحلية
-                    item.quantity += quantity;
-                    await saveCenterData();
-                    
-                    showNotification('تمت إضافة الكمية إلى المخزون بنجاح', 'success');
-                    
-                    // إعادة تعيين الحقول
-                    document.getElementById('add-item').value = '';
-                    document.getElementById('add-quantity').value = '';
-                    document.getElementById('add-note').value = '';
-                }
-            } catch (error) {
-                console.error('Error adding to inventory:', error);
-                showNotification('حدث خطأ أثناء إضافة الكمية إلى المخزون', 'error');
-            }
-        }
-        
-        // تسجيل عملية بيع
-        async function recordSale() {
-            if (!currentCenter) return;
-            
-            const itemId = document.getElementById('sale-item').value;
-            const quantity = parseInt(document.getElementById('sale-quantity').value);
-            const customerName = document.getElementById('customer-name').value.trim();
-            const customerPhone = document.getElementById('customer-phone').value.trim();
-            
-            if (!itemId || isNaN(quantity) || !customerName) {
-                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
-                return;
-            }
-            
-            try {
-                const item = currentCenter.inventory.find(i => i.id == itemId);
-                if (item) {
-                    if (item.quantity < quantity) {
-                        showNotification('الكمية المتاحة غير كافية', 'error');
-                        return;
-                    }
-                    
-                    const saleRecord = {
-                        itemId: itemId,
-                        itemName: item.name,
-                        quantity: quantity,
-                        customerName: customerName,
-                        customerPhone: customerPhone,
-                        date: new Date(),
-                        totalPrice: quantity * item.price
-                    };
-                    
-                    // إضافة عملية البيع إلى Firestore
-                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                        .collection(SALES_COLLECTION).add(saleRecord);
-                    
-                    // تحديث كمية الصنف في Firestore
-                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
-                            quantity: firebase.firestore.FieldValue.increment(-quantity)
-                        });
-                    
-                    // تحديث البيانات المحلية
-                    item.quantity -= quantity;
-                    currentCenter.sales.push(saleRecord);
-                    await saveCenterData();
-                    
-                    showNotification('تم تسجيل عملية البيع بنجاح', 'success');
-                    
-                    // إعادة تعيين الحقول
-                    document.getElementById('sale-item').value = '';
-                    document.getElementById('sale-quantity').value = '';
-                    document.getElementById('customer-name').value = '';
-                    document.getElementById('customer-phone').value = '';
-                }
-            } catch (error) {
-                console.error('Error recording sale:', error);
-                showNotification('حدث خطأ أثناء تسجيل عملية البيع', 'error');
-            }
-        }
-        
-        // تسجيل عملية صيانة
-        async function recordMaintenance() {
-            if (!currentCenter) return;
-            
-            const itemId = document.getElementById('maintenance-item').value;
-            const quantity = parseInt(document.getElementById('maintenance-quantity').value);
-            const customerName = document.getElementById('maintenance-customer-name').value.trim();
-            const customerPhone = document.getElementById('maintenance-customer-phone').value.trim();
-            const deviceName = document.getElementById('device-name').value.trim();
-            const technicianName = document.getElementById('technician-name').value.trim();
-            const status = document.getElementById('maintenance-status').value;
-            const note = document.getElementById('maintenance-note').value.trim();
-            
-            if (!itemId || isNaN(quantity) || !customerName || !deviceName || !technicianName) {
-                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
-                return;
-            }
-            
-            try {
-                const item = currentCenter.inventory.find(i => i.id == itemId);
-                if (item) {
-                    if (item.quantity < quantity) {
-                        showNotification('الكمية المتاحة غير كافية', 'error');
-                        return;
-                    }
-                    
-                    const maintenanceRecord = {
-                        itemId: itemId,
-                        itemName: item.name,
-                        quantity: quantity,
-                        customerName: customerName,
-                        customerPhone: customerPhone,
-                        deviceName: deviceName,
-                        technicianName: technicianName,
-                        status: status,
-                        note: note,
-                        date: new Date()
-                    };
-                    
-                    // إضافة عملية الصيانة إلى Firestore
-                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                        .collection(MAINTENANCE_COLLECTION).add(maintenanceRecord);
-                    
-                    // تحديث كمية الصنف في Firestore
-                    await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                        .collection(INVENTORY_COLLECTION).doc(itemId).update({
-                            quantity: firebase.firestore.FieldValue.increment(-quantity)
-                        });
-                    
-                    // تحديث البيانات المحلية
-                    item.quantity -= quantity;
-                    currentCenter.maintenance.push(maintenanceRecord);
-                    await saveCenterData();
-                    
-                    showNotification('تم تسجيل عملية الصيانة بنجاح', 'success');
-                    
-                    // إعادة تعيين الحقول
-                    document.getElementById('maintenance-item').value = '';
-                    document.getElementById('maintenance-quantity').value = '';
-                    document.getElementById('maintenance-customer-name').value = '';
-                    document.getElementById('maintenance-customer-phone').value = '';
-                    document.getElementById('device-name').value = '';
-                    document.getElementById('technician-name').value = '';
-                    document.getElementById('maintenance-note').value = '';
-                }
-            } catch (error) {
-                console.error('Error recording maintenance:', error);
-                showNotification('حدث خطأ أثناء تسجيل عملية الصيانة', 'error');
-            }
-        }
-        
-        // تصدير البيانات
-        function exportData(type) {
-            // في تطبيق حقيقي، هنا سيتم تصدير البيانات حسب النوع المحدد
-            showNotification(`تم تصدير بيانات ${type} بنجاح`, 'success');
-        }
-        
-        // تحديث قوائم اختيار الأصناف
-        function updateItemSelects() {
-            if (!currentCenter) return;
-            
-            const addItemSelect = document.getElementById('add-item');
-            const saleItemSelect = document.getElementById('sale-item');
-            const maintenanceItemSelect = document.getElementById('maintenance-item');
-            
-            // مسح القوائم الحالية
-            addItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-            saleItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-            maintenanceItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-            
-            // إضافة الأصناف إلى القوائم
-            currentCenter.inventory.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.name;
-                
-                addItemSelect.appendChild(option.cloneNode(true));
-                saleItemSelect.appendChild(option.cloneNode(true));
-                maintenanceItemSelect.appendChild(option.cloneNode(true));
-            });
-        }
-        
-        // تحديث جدول الأصناف
-        function updateItemsTable() {
-            if (!currentCenter) return;
-            
-            const tbody = document.querySelector('#items-table tbody');
-            tbody.innerHTML = '';
-            
-            currentCenter.inventory.forEach(item => {
-                const row = document.createElement('tr');
-                const value = item.quantity * item.price;
-                
-                row.innerHTML = `
-                    <td>${item.name}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.price.toFixed(2)} جنيه</td>
-                    <td>${value.toFixed(2)} جنيه</td>
-                    <td>${item.note || ''}</td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // تحديث جدول المبيعات
-        function updateSalesTable() {
-            if (!currentCenter) return;
-            
-            const tbody = document.querySelector('#sales-table tbody');
-            tbody.innerHTML = '';
-            
-            currentCenter.sales.slice().reverse().forEach(sale => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${new Date(sale.date).toLocaleString('ar-EG')}</td>
-                    <td>${sale.itemName}</td>
-                    <td>${sale.quantity}</td>
-                    <td>${sale.customerName}</td>
-                    <td>${sale.customerPhone}</td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // تحديث جدول الصيانة
-        function updateMaintenanceTable() {
-            if (!currentCenter) return;
-            
-            const tbody = document.querySelector('#maintenance-table tbody');
-            tbody.innerHTML = '';
-            
-            currentCenter.maintenance.slice().reverse().forEach(maintenance => {
-                const row = document.createElement('tr');
-                
-                // تحديد فئة الحالة
-                let statusClass = '';
-                if (maintenance.status === 'في انتظار قطعة غيار') statusClass = 'status-waiting-part';
-                else if (maintenance.status === 'في انتظار الفني') statusClass = 'status-waiting-technician';
-                else if (maintenance.status === 'تم الصيانة') statusClass = 'status-completed';
-                else if (maintenance.status === 'في انتظار العميل') statusClass = 'status-waiting-customer';
-                
-                row.innerHTML = `
-                    <td>${new Date(maintenance.date).toLocaleString('ar-EG')}</td>
-                    <td>${maintenance.itemName}</td>
-                    <td>${maintenance.quantity}</td>
-                    <td>${maintenance.customerName}<br>${maintenance.customerPhone}</td>
-                    <td>${maintenance.deviceName}</td>
-                    <td>${maintenance.technicianName}</td>
-                    <td><span class="maintenance-status ${statusClass}">${maintenance.status}</span></td>
-                    <td class="action-buttons">
-                        <button class="delete" onclick="deleteMaintenance('${maintenance.id}')"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // تحديث الإحصائيات
-        function updateInventorySummary() {
-            if (!currentCenter) return;
-            
-            const totalItems = currentCenter.inventory.length;
-            const totalQuantity = currentCenter.inventory.reduce((sum, item) => sum + item.quantity, 0);
-            const totalValue = currentCenter.inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-            const totalSales = currentCenter.sales.length;
-            const totalMaintenance = currentCenter.maintenance.length;
-            const totalSalesValue = currentCenter.sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
-            
-            document.getElementById('total-items').textContent = totalItems;
-            document.getElementById('total-quantity').textContent = totalQuantity;
-            document.getElementById('total-value').textContent = totalValue.toFixed(2);
-            document.getElementById('total-sales').textContent = totalSales;
-            document.getElementById('total-maintenance').textContent = totalMaintenance;
-            document.getElementById('total-sales-value').textContent = totalSalesValue.toFixed(2);
-        }
-        
-        // حذف طلب صيانة
-        async function deleteMaintenance(id) {
-            if (!confirm('هل أنت متأكد من حذف طلب الصيانة هذا؟')) {
-                return;
-            }
-            
-            try {
-                // حذف طلب الصيانة من Firestore
-                await db.collection(CENTERS_COLLECTION).doc(currentCenter.id)
-                    .collection(MAINTENANCE_COLLECTION).doc(id).delete();
-                
-                // تحديث البيانات المحلية
-                currentCenter.maintenance = currentCenter.maintenance.filter(m => m.id !== id);
-                await saveCenterData();
-                
-                showNotification('تم حذف طلب الصيانة بنجاح', 'success');
-            } catch (error) {
-                console.error('Error deleting maintenance:', error);
-                showNotification('حدث خطأ أثناء حذف طلب الصيانة', 'error');
-            }
-        }
-        
-        // تحديث جدول المراكز
-        function updateCentersTable() {
-            const tbody = document.querySelector('#centers-table tbody');
-            tbody.innerHTML = '';
-            
-            centers.forEach(center => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${center.name}</td>
-                    <td>${center.password}</td>
-                    <td class="action-buttons">
-                        <button onclick="editCenter('${center.id}')">تعديل</button>
-                        <button class="delete" onclick="deleteCenter('${center.id}')">حذف</button>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
         }
         
         // عرض لوحة المسؤول
@@ -1530,25 +2096,322 @@
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('app-container').style.display = 'none';
             document.getElementById('admin-container').style.display = 'block';
+            
+            // تحميل بيانات جميع المراكز عند فتح لوحة المسؤول
+            loadCenterDataForAdmin('all');
         }
         
         // عرض تطبيق المركز
-        function showApp() {
-            document.getElementById('login-page').style.display = 'none';
-            document.getElementById('admin-container').style.display = 'none';
-            document.getElementById('app-container').style.display = 'block';
+        // function showApp() {
+        //     document.getElementById('login-page').style.display = 'none';
+        //     document.getElementById('admin-container').style.display = 'none';
+        //     document.getElementById('app-container').style.display = 'block';
             
-            // تحديث واجهة المستخدم
-            document.getElementById('center-header').textContent = currentCenter.name;
+        //     // تحديث واجهة المستخدم
+        //     document.getElementById('center-header').textContent = currentCenter.name;
             
-            // تحديث البيانات
-            updateItemSelects();
-            updateItemsTable();
-            updateSalesTable();
-            updateMaintenanceTable();
-            updateInventorySummary();
+        //     // تحديث البيانات
+        //     updateItemSelects();
+        //     updateItemsTable();
+        //     updateSalesTable();
+        //     updateMaintenanceTable();
+        //     updateInventorySummary();
+        //     updateTechnicianSelects();
+            
+        // }
+        // تحديث البيانات في واجهة المستخدم
+function updateUI() {
+    if (!currentCenter) return;
+    
+    // تحديث واجهة المستخدم
+    document.getElementById('center-header').textContent = currentCenter.name;
+    
+    // تحديث البيانات فقط إذا كانت العناصر موجودة في DOM
+    if (document.getElementById('items-table')) {
+        updateItemSelects();
+        updateItemsTable();
+        updateInventorySummary();
+    }
+    
+    if (document.getElementById('sales-table')) {
+        updateSalesTable();
+    }
+    
+    if (document.getElementById('maintenance-table')) {
+        updateMaintenanceTable();
+    }
+    
+    if (document.getElementById('technician-select')) {
+        updateTechnicianSelects();
+    }
+}
+
+// تحميل بيانات مركز من Firebase
+async function loadCenterFromFirebase(centerId) {
+    try {
+        showNotification('جاري تحميل بيانات المركز...', 'success');
+        
+        // جلب بيانات المركز الأساسية
+        const doc = await db.collection(CENTERS_COLLECTION).doc(centerId).get();
+        if (!doc.exists) {
+            showNotification('المركز غير موجود', 'error');
+            return;
         }
         
+        // جلب بيانات المخزون
+        const inventorySnapshot = await db.collection(CENTERS_COLLECTION)
+            .doc(centerId)
+            .collection(INVENTORY_COLLECTION)
+            .get();
+        
+        const inventory = [];
+        inventorySnapshot.forEach(doc => {
+            inventory.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // جلب بيانات المبيعات
+        const salesSnapshot = await db.collection(CENTERS_COLLECTION)
+            .doc(centerId)
+            .collection(SALES_COLLECTION)
+            .get();
+        
+        const sales = [];
+        salesSnapshot.forEach(doc => {
+            sales.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // جلب بيانات الصيانة
+        const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION)
+            .doc(centerId)
+            .collection(MAINTENANCE_COLLECTION)
+            .get();
+        
+        const maintenance = [];
+        maintenanceSnapshot.forEach(doc => {
+            maintenance.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // تحديث البيانات المحلية
+        currentCenter = { 
+            id: doc.id, 
+            ...doc.data(),
+            inventory: inventory,
+            sales: sales,
+            maintenance: maintenance
+        };
+        
+        localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+        
+        // تحديث واجهة المستخدم
+        updateUI();
+        
+        showNotification('تم تحميل بيانات المركز بنجاح', 'success');
+    } catch (error) {
+        console.error('Error loading center:', error);
+        showNotification('حدث خطأ في تحميل بيانات المركز', 'error');
+    }
+}
+
+// عرض تطبيق المركز
+function showApp() {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('admin-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    
+    // تحديث واجهة المستخدم
+    updateUI();
+}
+
+// تحديث قوائم اختيار الأصناف
+function updateItemSelects() {
+    if (!currentCenter) return;
+    
+    const addItemSelect = document.getElementById('add-item');
+    const saleItemSelect = document.getElementById('sale-item');
+    const maintenanceItemSelect = document.getElementById('maintenance-item');
+    
+    // التحقق من وجود العناصر في DOM
+    if (!addItemSelect || !saleItemSelect || !maintenanceItemSelect) return;
+    
+    // مسح القوائم الحالية
+    addItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+    saleItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+    maintenanceItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
+    
+    // إضافة الأصناف إلى القوائم
+    if (currentCenter.inventory && currentCenter.inventory.length > 0) {
+        currentCenter.inventory.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            
+            if (addItemSelect) addItemSelect.appendChild(option.cloneNode(true));
+            if (saleItemSelect) saleItemSelect.appendChild(option.cloneNode(true));
+            if (maintenanceItemSelect) maintenanceItemSelect.appendChild(option.cloneNode(true));
+        });
+    }
+}
+
+// تحديث جدول الأصناف
+function updateItemsTable() {
+    if (!currentCenter) return;
+    
+    const tbody = document.querySelector('#items-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (currentCenter.inventory && currentCenter.inventory.length > 0) {
+        currentCenter.inventory.forEach(item => {
+            const row = document.createElement('tr');
+            const value = item.quantity * item.price;
+            
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>${item.price.toFixed(2)} جنيه</td>
+                <td>${value.toFixed(2)} جنيه</td>
+                <td>${item.note || ''}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="5" style="text-align: center;">لا توجد أصناف في المخزون</td>`;
+        tbody.appendChild(row);
+    }
+}
+
+// تحديث جدول المبيعات
+function updateSalesTable() {
+    if (!currentCenter) return;
+    
+    const tbody = document.querySelector('#sales-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (currentCenter.sales && currentCenter.sales.length > 0) {
+        // ترتيب المبيعات من الأحدث إلى الأقدم
+        const sortedSales = [...currentCenter.sales].sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
+        });
+        
+        sortedSales.forEach(sale => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${new Date(sale.date).toLocaleString('ar-EG')}</td>
+                <td>${sale.itemName}</td>
+                <td>${sale.quantity}</td>
+                <td>${sale.unitPrice ? sale.unitPrice.toFixed(2) : '0.00'} جنيه</td>
+                <td>${sale.totalPrice ? sale.totalPrice.toFixed(2) : '0.00'} جنيه</td>
+                <td>${sale.customerName || ''}</td>
+                <td>${sale.customerPhone || ''}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد عمليات بيع</td>`;
+        tbody.appendChild(row);
+    }
+}
+
+// تحديث جدول الصيانة
+function updateMaintenanceTable() {
+    if (!currentCenter) return;
+    
+    const tbody = document.querySelector('#maintenance-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (currentCenter.maintenance && currentCenter.maintenance.length > 0) {
+        // ترتيب طلبات الصيانة من الأحدث إلى الأقدم
+        const sortedMaintenance = [...currentCenter.maintenance].sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
+        });
+        
+        sortedMaintenance.forEach(maintenance => {
+            const row = document.createElement('tr');
+            
+            // تحديد فئة الحالة
+            let statusClass = '';
+            if (maintenance.status === 'في انتظار قطعة غيار') statusClass = 'status-waiting-part';
+            else if (maintenance.status === 'في انتظار الفني') statusClass = 'status-waiting-technician';
+            else if (maintenance.status === 'تم الصيانة') statusClass = 'status-completed';
+            else if (maintenance.status === 'في انتظار العميل') statusClass = 'status-waiting-customer';
+            
+            row.innerHTML = `
+                <td>${new Date(maintenance.date).toLocaleString('ar-EG')}</td>
+                <td>${maintenance.itemName}</td>
+                <td>${maintenance.quantity}</td>
+                <td>${maintenance.customerName}<br>${maintenance.customerPhone}</td>
+                <td>${maintenance.deviceName}</td>
+                <td>${maintenance.technicianName}</td>
+                <td><span class="maintenance-status ${statusClass}">${maintenance.status}</span></td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد طلبات صيانة</td>`;
+        tbody.appendChild(row);
+    }
+}
+
+// تحديث الإحصائيات
+function updateInventorySummary() {
+    if (!currentCenter) return;
+    
+    const totalItems = currentCenter.inventory ? currentCenter.inventory.length : 0;
+    const totalQuantity = currentCenter.inventory ? currentCenter.inventory.reduce((sum, item) => sum + item.quantity, 0) : 0;
+    const totalValue = currentCenter.inventory ? currentCenter.inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0) : 0;
+    const totalSales = currentCenter.sales ? currentCenter.sales.length : 0;
+    const totalMaintenance = currentCenter.maintenance ? currentCenter.maintenance.length : 0;
+    const totalSalesValue = currentCenter.sales ? currentCenter.sales.reduce((sum, sale) => sum + (sale.totalPrice || 0), 0) : 0;
+    
+    // تحديث العناصر فقط إذا كانت موجودة في DOM
+    const totalItemsEl = document.getElementById('total-items');
+    const totalQuantityEl = document.getElementById('total-quantity');
+    const totalValueEl = document.getElementById('total-value');
+    const totalSalesEl = document.getElementById('total-sales');
+    const totalMaintenanceEl = document.getElementById('total-maintenance');
+    const totalSalesValueEl = document.getElementById('total-sales-value');
+    
+    if (totalItemsEl) totalItemsEl.textContent = totalItems;
+    if (totalQuantityEl) totalQuantityEl.textContent = totalQuantity;
+    if (totalValueEl) totalValueEl.textContent = totalValue.toFixed(2);
+    if (totalSalesEl) totalSalesEl.textContent = totalSales;
+    if (totalMaintenanceEl) totalMaintenanceEl.textContent = totalMaintenance;
+    if (totalSalesValueEl) totalSalesValueEl.textContent = totalSalesValue.toFixed(2);
+}
+
+// تحديث قوائم اختيار الفنيين
+function updateTechnicianSelects() {
+    const technicianSelect = document.getElementById('technician-select');
+    if (!technicianSelect) return;
+    
+    // مسح القائمة الحالية
+    technicianSelect.innerHTML = '<option value="">-- اختر الفني --</option>';
+    
+    // إضافة الفنيين إلى القائمة
+    if (technicians && technicians.length > 0) {
+        technicians.forEach(tech => {
+            // عرض الفنيين المرتبطين بالمركز الحالي أو الفنيين العامين
+            if (!tech.centerIds || tech.centerIds.includes(currentCenter.id)) {
+                const option = document.createElement('option');
+                option.value = tech.id;
+                option.textContent = tech.name;
+                technicianSelect.appendChild(option);
+            }
+        });
+    }
+}
         // عرض الإشعارات
         function showNotification(message, type) {
             const notification = document.getElementById('notification');
@@ -1559,9 +2422,89 @@
                 notification.classList.remove('show');
             }, 3000);
         }
+        // دوال الحذف (للمسؤول فقط)
+        async function deleteItemAdmin(itemId, centerId) {
+            if (!confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
+                return;
+            }
+            
+            try {
+                if (!centerId) {
+                    showNotification('لا يمكن تحديد المركز', 'error');
+                    return;
+                }
+                
+                await db.collection(CENTERS_COLLECTION).doc(centerId).collection(INVENTORY_COLLECTION).doc(itemId).delete();
+                showNotification('تم حذف الصنف بنجاح', 'success');
+                
+                // إعادة تحميل البيانات
+                const currentCenterId = document.getElementById('admin-center-select').value;
+                loadCenterDataForAdmin(currentCenterId);
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                showNotification('حدث خطأ أثناء حذف الصنف', 'error');
+            }
+        }
         
+        async function deleteSaleAdmin(saleId, centerId) {
+            if (!confirm('هل أنت متأكد من حذف عملية البيع هذه؟')) {
+                return;
+            }
+            
+            try {
+                if (!centerId) {
+                    showNotification('لا يمكن تحديد المركز', 'error');
+                    return;
+                }
+                
+                await db.collection(CENTERS_COLLECTION).doc(centerId).collection(SALES_COLLECTION).doc(saleId).delete();
+                showNotification('تم حذف عملية البيع بنجاح', 'success');
+                
+                // إعادة تحميل البيانات
+                const currentCenterId = document.getElementById('admin-center-select').value;
+                loadCenterDataForAdmin(currentCenterId);
+            } catch (error) {
+                console.error('Error deleting sale:', error);
+                showNotification('حدث خطأ أثناء حذف عملية البيع', 'error');
+            }
+        }
+        
+        async function deleteMaintenanceAdmin(maintenanceId, centerId) {
+            if (!confirm('هل أنت متأكد من حذف عملية الصيانة هذه؟')) {
+                return;
+            }
+            
+            try {
+                if (!centerId) {
+                    showNotification('لا يمكن تحديد المركز', 'error');
+                    return;
+                }
+                
+                await db.collection(CENTERS_COLLECTION).doc(centerId).collection(MAINTENANCE_COLLECTION).doc(maintenanceId).delete();
+                showNotification('تم حذف عملية الصيانة بنجاح', 'success');
+                
+                // إعادة تحميل البيانات
+                const currentCenterId = document.getElementById('admin-center-select').value;
+                loadCenterDataForAdmin(currentCenterId);
+            } catch (error) {
+                console.error('Error deleting maintenance:', error);
+                showNotification('حدث خطأ أثناء حذف عملية الصيانة', 'error');
+            }
+        }
+        
+      
+        
+       
         // تهيئة الصفحة عند التحميل
         document.addEventListener('DOMContentLoaded', initializePage);
+        
+        // إضافة حدث عند تغيير اختيار المركز في لوحة المسؤول
+        document.getElementById('admin-center-select').addEventListener('change', function() {
+            const centerId = this.value;
+            if (centerId) {
+                loadCenterDataForAdmin(centerId);
+            }
+        });
     </script>
 </body>
 </html>
