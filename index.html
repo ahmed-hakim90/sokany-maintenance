@@ -912,6 +912,7 @@
         <button class="import" onclick="importData()"><i class="fas fa-upload"></i> استيراد البيانات</button>
     </div>
 </div>
+</div>
 
     <script>
         // تهيئة Firebase - استبدل هذه القيم ببيانات مشروعك من Firebase Console
@@ -932,11 +933,11 @@
         const auth = firebase.auth();
         
         // بيانات التخزين
-        let centers = [];
-        let technicians = [];
-        let currentCenter = null;
-        let isAdmin = false;
-        const adminPassword = "admin123"; // كلمة مرور المسؤول الافتراضية
+        var centers = [];
+        var technicians = [];
+        var currentCenter = null;
+        var isAdmin = false;
+        var adminPassword = "admin123"; // كلمة مرور المسؤول الافتراضية
         
         // أسماء الكولكشن في Firebase
         const CENTERS_COLLECTION = "centers";
@@ -1107,7 +1108,7 @@
             
             // دخول كمسؤول
             if (centerId === 'admin') {
-                if (password === adminPassword) {
+                if (password === "admin123") {
                     isAdmin = true;
                     showAdminPanel();
                     showNotification('تم الدخول كمسؤول', 'success');
