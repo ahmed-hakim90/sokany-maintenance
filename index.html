@@ -381,7 +381,23 @@
             margin: 0;
         }
         
-        @media (max-width: 768px) {
+        .offline-indicator {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #f39c12;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1001;
+            opacity: 0.9;
+        }
+        
+        .offline-indicator.hidden {
+            display: none;
+        }
             .tabs {
                 flex-direction: column;
             }
@@ -408,6 +424,24 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        .offline-indicator {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #f39c12;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1001;
+            opacity: 0.9;
+        }
+        
+        .offline-indicator.hidden {
+            display: none;
+        }
     </style>
     <!-- Firebase App (الجزء الأساسي من Firebase SDK) -->
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
@@ -417,6 +451,18 @@
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
 </head>
 <body>
+    <div id="offline-indicator" class="offline-indicator hidden">
+        <i class="fas fa-wifi"></i> الوضع المحلي
+    </div>
+    
+    <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div style="text-align: center;">
+            <div class="loading"></div>
+            <div style="margin-top: 20px; font-size: 18px; color: #2c3e50;">جاري تحميل النظام...</div>
+            <div id="loading-status" style="margin-top: 10px; font-size: 14px; color: #7f8c8d;"></div>
+        </div>
+    </div>
+
     <div id="notification" class="notification"></div>
     
     <div id="login-page" class="login-container">
@@ -925,11 +971,28 @@
         };
         
         // تهيئة Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined') {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+            } catch (error) {
+                console.error('Firebase initialization failed:', error);
+            }
         }
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        
+        // محاولة الحصول على مراجع Firebase إذا كانت متاحة
+        let db = null;
+        let auth = null;
+        
+        try {
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                db = firebase.firestore();
+                auth = firebase.auth();
+            }
+        } catch (error) {
+            console.error('Firebase services initialization failed:', error);
+        }
         
         // بيانات التخزين
         let centers = [];
@@ -949,22 +1012,170 @@
         let salesChart = null;
         let inventoryChart = null;
         
+        // متغير للتحقق من حالة تهيئة Firebase
+        let firebaseInitialized = false;
+        let initializationAttempts = 0;
+        const MAX_INIT_ATTEMPTS = 3;
+        
         // تهيئة الصفحة
         function initializePage() {
-            // تحميل بيانات المراكز من Firebase
-            loadCentersFromFirebase();
-            loadTechniciansFromFirebase();
+            updateLoadingStatus('جاري تهيئة النظام...');
             
-            // إذا كان هناك مركز مسجل مسبقاً، تخطي صفحة التسجيل
+            // التحقق من توفر Firebase وتهيئته
+            initializeFirebaseWithRetry();
+        }
+        
+        // تحديث حالة التحميل
+        function updateLoadingStatus(message) {
+            const statusEl = document.getElementById('loading-status');
+            if (statusEl) {
+                statusEl.textContent = message;
+            }
+        }
+        
+        // إخفاء شاشة التحميل
+        function hideLoadingScreen() {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+        }
+        
+        // تهيئة Firebase مع إعادة المحاولة
+        function initializeFirebaseWithRetry() {
+            initializationAttempts++;
+            
+            updateLoadingStatus(`محاولة الاتصال (${initializationAttempts}/${MAX_INIT_ATTEMPTS})...`);
+            
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                // Firebase متاح بالفعل
+                firebaseInitialized = true;
+                updateLoadingStatus('تم الاتصال بالخادم بنجاح');
+                completeInitialization();
+                return;
+            }
+            
+            if (typeof firebase !== 'undefined') {
+                try {
+                    // تهيئة Firebase
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    db = firebase.firestore();
+                    auth = firebase.auth();
+                    firebaseInitialized = true;
+                    updateLoadingStatus('تم الاتصال بالخادم بنجاح');
+                    completeInitialization();
+                    return;
+                } catch (error) {
+                    console.error('Firebase initialization error:', error);
+                    updateLoadingStatus('فشل في الاتصال بالخادم');
+                }
+            }
+            
+            // إذا فشلت التهيئة، حاول مرة أخرى بعد فترة
+            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
+                updateLoadingStatus(`إعادة المحاولة خلال ${2 * initializationAttempts} ثانية...`);
+                setTimeout(() => {
+                    initializeFirebaseWithRetry();
+                }, 2000 * initializationAttempts); // تأخير متزايد
+            } else {
+                // فشلت جميع المحاولات، تفعيل الوضع المحلي
+                updateLoadingStatus('سيتم تشغيل النظام في الوضع المحلي');
+                setTimeout(() => {
+                    initializeOfflineMode();
+                }, 1500);
+            }
+        }
+        
+        // إكمال التهيئة بعد نجاح تحميل Firebase
+        function completeInitialization() {
+            updateLoadingStatus('جاري تحميل البيانات...');
+            
+            // تحميل بيانات المراكز من Firebase
+            Promise.all([
+                loadCentersFromFirebase(),
+                loadTechniciansFromFirebase()
+            ]).then(() => {
+                updateLoadingStatus('تم الانتهاء من التحميل');
+                
+                // إذا كان هناك مركز مسجل مسبقاً، تحميل بياناته
+                const savedCenter = localStorage.getItem('currentCenter');
+                if (savedCenter) {
+                    try {
+                        currentCenter = JSON.parse(savedCenter);
+                        showApp();
+                    } catch (error) {
+                        console.error('Error parsing saved center:', error);
+                        localStorage.removeItem('currentCenter');
+                        hideLoadingScreen();
+                    }
+                } else {
+                    hideLoadingScreen();
+                }
+            }).catch((error) => {
+                console.error('Error during initialization:', error);
+                hideLoadingScreen();
+            });
+        }
+        
+        // تفعيل الوضع المحلي عند فشل Firebase
+        function initializeOfflineMode() {
+            firebaseInitialized = false;
+            updateLoadingStatus('تشغيل النظام في الوضع المحلي...');
+            
+            // إظهار مؤشر الوضع المحلي
+            const offlineIndicator = document.getElementById('offline-indicator');
+            if (offlineIndicator) {
+                offlineIndicator.classList.remove('hidden');
+            }
+            
+            // تحميل البيانات من التخزين المحلي
+            const savedCenters = localStorage.getItem('centers');
+            if (savedCenters) {
+                try {
+                    centers = JSON.parse(savedCenters);
+                    updateCenterSelects();
+                } catch (error) {
+                    console.error('Error loading saved centers:', error);
+                }
+            }
+            
+            const savedTechnicians = localStorage.getItem('technicians');
+            if (savedTechnicians) {
+                try {
+                    technicians = JSON.parse(savedTechnicians);
+                    updateTechnicianSelects();
+                } catch (error) {
+                    console.error('Error loading saved technicians:', error);
+                }
+            }
+            
+            // إذا كان هناك مركز مسجل مسبقاً
             const savedCenter = localStorage.getItem('currentCenter');
             if (savedCenter) {
-                currentCenter = JSON.parse(savedCenter);
-                showApp();
+                try {
+                    currentCenter = JSON.parse(savedCenter);
+                    showApp();
+                } catch (error) {
+                    console.error('Error parsing saved center:', error);
+                    localStorage.removeItem('currentCenter');
+                    hideLoadingScreen();
+                }
+            } else {
+                hideLoadingScreen();
             }
+            
+            showNotification('تم تشغيل النظام في الوضع المحلي', 'success');
         }
         
         // تحميل المراكز من Firebase
         async function loadCentersFromFirebase() {
+            if (!firebaseInitialized) {
+                console.log('Firebase not initialized, skipping centers load');
+                return;
+            }
+            
             try {
                 showNotification('جاري تحميل البيانات...', 'success');
                 const snapshot = await db.collection(CENTERS_COLLECTION).get();
@@ -973,6 +1184,9 @@
                     centers.push({ id: doc.id, ...doc.data() });
                 });
                 
+                // حفظ البيانات محلياً للاستخدام في الوضع المحلي
+                localStorage.setItem('centers', JSON.stringify(centers));
+                
                 // تحديث واجهة المستخدم
                 updateCenterSelects();
                 updateTechnicianCenterSelect();
@@ -980,11 +1194,29 @@
             } catch (error) {
                 console.error('Error loading centers:', error);
                 showNotification('حدث خطأ في تحميل بيانات المراكز', 'error');
+                
+                // محاولة تحميل البيانات من التخزين المحلي كبديل
+                const savedCenters = localStorage.getItem('centers');
+                if (savedCenters) {
+                    try {
+                        centers = JSON.parse(savedCenters);
+                        updateCenterSelects();
+                        updateTechnicianCenterSelect();
+                        showNotification('تم تحميل البيانات من التخزين المحلي', 'success');
+                    } catch (parseError) {
+                        console.error('Error parsing saved centers:', parseError);
+                    }
+                }
             }
         }
         
         // تحميل الفنيين من Firebase
         async function loadTechniciansFromFirebase() {
+            if (!firebaseInitialized) {
+                console.log('Firebase not initialized, skipping technicians load');
+                return;
+            }
+            
             try {
                 const snapshot = await db.collection(TECHNICIANS_COLLECTION).get();
                 technicians = [];
@@ -992,12 +1224,27 @@
                     technicians.push({ id: doc.id, ...doc.data() });
                 });
                 
+                // حفظ البيانات محلياً للاستخدام في الوضع المحلي
+                localStorage.setItem('technicians', JSON.stringify(technicians));
+                
                 // تحديث واجهة المستخدم
                 updateTechnicianSelects();
                 updateAllTechniciansTable();
             } catch (error) {
                 console.error('Error loading technicians:', error);
                 showNotification('حدث خطأ في تحميل بيانات الفنيين', 'error');
+                
+                // محاولة تحميل البيانات من التخزين المحلي كبديل
+                const savedTechnicians = localStorage.getItem('technicians');
+                if (savedTechnicians) {
+                    try {
+                        technicians = JSON.parse(savedTechnicians);
+                        updateTechnicianSelects();
+                        updateAllTechniciansTable();
+                    } catch (parseError) {
+                        console.error('Error parsing saved technicians:', parseError);
+                    }
+                }
             }
         }
         
@@ -1130,7 +1377,16 @@
                     return;
                 }
                 
-                loadCenterFromFirebase(center.id);
+                if (firebaseInitialized) {
+                    // تحميل البيانات من Firebase
+                    loadCenterFromFirebase(center.id);
+                } else {
+                    // الوضع المحلي
+                    currentCenter = center;
+                    localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                    showApp();
+                    showNotification('تم الدخول في الوضع المحلي', 'success');
+                }
             } catch (error) {
                 console.error('Login error:', error);
                 showNotification('حدث خطأ أثناء تسجيل الدخول', 'error');
@@ -1163,6 +1419,11 @@ async function logout() {
         
         // إضافة مركز جديد إلى Firebase
         async function addNewCenter() {
+            if (!firebaseInitialized) {
+                showNotification('لا يمكن إضافة مركز جديد في الوضع المحلي', 'error');
+                return;
+            }
+            
             const name = document.getElementById('new-center-name').value.trim();
             const email = document.getElementById('new-center-email').value.trim();
             const password = document.getElementById('new-center-password').value;
@@ -2097,8 +2358,13 @@ async function exportData(type) {
             document.getElementById('app-container').style.display = 'none';
             document.getElementById('admin-container').style.display = 'block';
             
+            // إخفاء شاشة التحميل
+            hideLoadingScreen();
+            
             // تحميل بيانات جميع المراكز عند فتح لوحة المسؤول
-            loadCenterDataForAdmin('all');
+            if (firebaseInitialized) {
+                loadCenterDataForAdmin('all');
+            }
         }
         
         // عرض تطبيق المركز
@@ -2217,6 +2483,9 @@ function showApp() {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('admin-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'block';
+    
+    // إخفاء شاشة التحميل
+    hideLoadingScreen();
     
     // تحديث واجهة المستخدم
     updateUI();
