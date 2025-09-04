@@ -950,16 +950,27 @@
         let inventoryChart = null;
         
         // تهيئة الصفحة
-        function initializePage() {
-            // تحميل بيانات المراكز من Firebase
-            loadCentersFromFirebase();
-            loadTechniciansFromFirebase();
-            
-            // إذا كان هناك مركز مسجل مسبقاً، تخطي صفحة التسجيل
-            const savedCenter = localStorage.getItem('currentCenter');
-            if (savedCenter) {
-                currentCenter = JSON.parse(savedCenter);
-                showApp();
+        async function initializePage() {
+            try {
+                // تحميل بيانات المراكز من Firebase
+                await loadCentersFromFirebase();
+                await loadTechniciansFromFirebase();
+                
+                // إذا كان هناك مركز مسجل مسبقاً، تخطي صفحة التسجيل
+                const savedCenter = localStorage.getItem('currentCenter');
+                if (savedCenter) {
+                    try {
+                        currentCenter = JSON.parse(savedCenter);
+                        await showApp();
+                    } catch (error) {
+                        console.error('Error parsing saved center data:', error);
+                        localStorage.removeItem('currentCenter');
+                        showNotification('حدث خطأ في البيانات المحفوظة، يرجى تسجيل الدخول مرة أخرى', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                showNotification('حدث خطأ أثناء تهيئة الصفحة', 'error');
             }
         }
         
@@ -1003,31 +1014,62 @@
         
         // تحديث قوائم اختيار المراكز
         function updateCenterSelects() {
-            const centerSelect = document.getElementById('center-select');
-            const adminCenterSelect = document.getElementById('admin-center-select');
-            
-            // مسح القوائم الحالية
-            centerSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
-            adminCenterSelect.innerHTML = '<option value="">-- اختر المركز --</option><option value="all">جميع المراكز</option>';
-            
-            // إضافة خيار لوحة المسؤول
-            const adminOption = document.createElement('option');
-            adminOption.value = 'admin';
-            adminOption.textContent = 'لوحة المسؤول';
-            centerSelect.appendChild(adminOption);
-            
-            // إضافة المراكز إلى القوائم
-            centers.forEach(center => {
-                const option = document.createElement('option');
-                option.value = center.id;
-                option.textContent = center.name;
+            try {
+                const centerSelect = document.getElementById('center-select');
+                const adminCenterSelect = document.getElementById('admin-center-select');
                 
-                centerSelect.appendChild(option.cloneNode(true));
-                adminCenterSelect.appendChild(option.cloneNode(true));
-            });
-            
-            // تحديث جدول المراكز في لوحة المسؤول
-            // updateCentersTable();
+                if (!centerSelect) {
+                    console.warn('Center select element not found');
+                    return;
+                }
+                
+                // مسح القوائم الحالية
+                centerSelect.innerHTML = '<option value="">-- اختر المركز --</option>';
+                if (adminCenterSelect) {
+                    adminCenterSelect.innerHTML = '<option value="">-- اختر المركز --</option><option value="all">جميع المراكز</option>';
+                }
+                
+                // إضافة خيار لوحة المسؤول
+                const adminOption = document.createElement('option');
+                adminOption.value = 'admin';
+                adminOption.textContent = 'لوحة المسؤول';
+                centerSelect.appendChild(adminOption);
+                
+                // إضافة المراكز إلى القوائم
+                if (centers && Array.isArray(centers) && centers.length > 0) {
+                    centers.forEach(center => {
+                        try {
+                            if (!center || !center.id || !center.name) {
+                                console.warn('Invalid center data:', center);
+                                return;
+                            }
+                            
+                            const option = document.createElement('option');
+                            option.value = center.id;
+                            option.textContent = center.name;
+                            
+                            centerSelect.appendChild(option.cloneNode(true));
+                            
+                            if (adminCenterSelect) {
+                                adminCenterSelect.appendChild(option.cloneNode(true));
+                            }
+                        } catch (error) {
+                            console.warn('Error processing center:', center, error);
+                        }
+                    });
+                } else {
+                    console.warn('No centers data available or invalid format');
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'لا يوجد مراكز مسجلة';
+                    option.disabled = true;
+                    centerSelect.appendChild(option);
+                }
+                
+            } catch (error) {
+                console.error('Error updating center selects:', error);
+                showNotification('حدث خطأ أثناء تحديث قوائم المراكز', 'error');
+            }
         }
         
         // تحديث قائمة المراكز للفنيين
@@ -1130,7 +1172,7 @@
                     return;
                 }
                 
-                loadCenterFromFirebase(center.id);
+                await loadCenterFromFirebase(center.id);
             } catch (error) {
                 console.error('Login error:', error);
                 showNotification('حدث خطأ أثناء تسجيل الدخول', 'error');
@@ -2120,29 +2162,46 @@ async function exportData(type) {
             
         // }
         // تحديث البيانات في واجهة المستخدم
-function updateUI() {
-    if (!currentCenter) return;
-    
-    // تحديث واجهة المستخدم
-    document.getElementById('center-header').textContent = currentCenter.name;
-    
-    // تحديث البيانات فقط إذا كانت العناصر موجودة في DOM
-    if (document.getElementById('items-table')) {
-        updateItemSelects();
-        updateItemsTable();
-        updateInventorySummary();
-    }
-    
-    if (document.getElementById('sales-table')) {
-        updateSalesTable();
-    }
-    
-    if (document.getElementById('maintenance-table')) {
-        updateMaintenanceTable();
-    }
-    
-    if (document.getElementById('technician-select')) {
-        updateTechnicianSelects();
+async function updateUI() {
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for UI update');
+            return;
+        }
+        
+        // تحديث واجهة المستخدم
+        const centerHeader = document.getElementById('center-header');
+        if (centerHeader) {
+            centerHeader.textContent = currentCenter.name;
+        }
+        
+        // تحديث البيانات فقط إذا كانت العناصر موجودة في DOM مع مؤشر التحميل
+        const updates = [];
+        
+        if (document.getElementById('items-table')) {
+            updates.push(updateItemSelects());
+            updates.push(updateItemsTable());
+            updates.push(updateInventorySummary());
+        }
+        
+        if (document.getElementById('sales-table')) {
+            updates.push(updateSalesTable());
+        }
+        
+        if (document.getElementById('maintenance-table')) {
+            updates.push(updateMaintenanceTable());
+        }
+        
+        if (document.getElementById('technician-select')) {
+            updates.push(updateTechnicianSelects());
+        }
+        
+        // تنفيذ جميع التحديثات بشكل متوازي
+        await Promise.all(updates.filter(update => update instanceof Promise));
+        
+    } catch (error) {
+        console.error('Error updating UI:', error);
+        showNotification('حدث خطأ أثناء تحديث واجهة المستخدم', 'error');
     }
 }
 
@@ -2202,8 +2261,8 @@ async function loadCenterFromFirebase(centerId) {
         
         localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
         
-        // تحديث واجهة المستخدم
-        updateUI();
+        // تحديث واجهة المستخدم باستخدام الدالة المحدثة
+        await updateUI();
         
         showNotification('تم تحميل بيانات المركز بنجاح', 'success');
     } catch (error) {
@@ -2213,214 +2272,482 @@ async function loadCenterFromFirebase(centerId) {
 }
 
 // عرض تطبيق المركز
-function showApp() {
-    document.getElementById('login-page').style.display = 'none';
-    document.getElementById('admin-container').style.display = 'none';
-    document.getElementById('app-container').style.display = 'block';
-    
-    // تحديث واجهة المستخدم
-    updateUI();
+async function showApp() {
+    try {
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('admin-container').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+        
+        // تحديث واجهة المستخدم باستخدام الدالة المحدثة
+        await updateUI();
+    } catch (error) {
+        console.error('Error showing app:', error);
+        showNotification('حدث خطأ أثناء عرض التطبيق', 'error');
+    }
 }
 
 // تحديث قوائم اختيار الأصناف
 function updateItemSelects() {
-    if (!currentCenter) return;
-    
-    const addItemSelect = document.getElementById('add-item');
-    const saleItemSelect = document.getElementById('sale-item');
-    const maintenanceItemSelect = document.getElementById('maintenance-item');
-    
-    // التحقق من وجود العناصر في DOM
-    if (!addItemSelect || !saleItemSelect || !maintenanceItemSelect) return;
-    
-    // مسح القوائم الحالية
-    addItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-    saleItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-    maintenanceItemSelect.innerHTML = '<option value="">-- اختر صنف --</option>';
-    
-    // إضافة الأصناف إلى القوائم
-    if (currentCenter.inventory && currentCenter.inventory.length > 0) {
-        currentCenter.inventory.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            option.textContent = item.name;
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for item selects update');
+            return;
+        }
+        
+        const selects = [
+            { id: 'add-item', defaultText: '-- اختر صنف --' },
+            { id: 'sale-item', defaultText: '-- اختر صنف --' },
+            { id: 'maintenance-item', defaultText: '-- اختر صنف --' }
+        ];
+        
+        // تحديث جميع القوائم
+        selects.forEach(selectInfo => {
+            const selectElement = document.getElementById(selectInfo.id);
+            if (!selectElement) {
+                console.warn(`Select element ${selectInfo.id} not found`);
+                return;
+            }
             
-            if (addItemSelect) addItemSelect.appendChild(option.cloneNode(true));
-            if (saleItemSelect) saleItemSelect.appendChild(option.cloneNode(true));
-            if (maintenanceItemSelect) maintenanceItemSelect.appendChild(option.cloneNode(true));
+            // مسح القائمة الحالية
+            selectElement.innerHTML = `<option value="">${selectInfo.defaultText}</option>`;
+            
+            // إضافة الأصناف إلى القائمة إذا كانت البيانات صحيحة
+            if (validateData(currentCenter.inventory, 'inventory')) {
+                currentCenter.inventory.forEach(item => {
+                    if (item && item.id && item.name) {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = `${item.name} (الكمية: ${item.quantity || 0})`;
+                        selectElement.appendChild(option);
+                    }
+                });
+            }
         });
+        
+    } catch (error) {
+        console.error('Error updating item selects:', error);
+        showNotification('حدث خطأ أثناء تحديث قوائم الأصناف', 'error');
     }
 }
 
 // تحديث جدول الأصناف
 function updateItemsTable() {
-    if (!currentCenter) return;
-    
-    const tbody = document.querySelector('#items-table tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    if (currentCenter.inventory && currentCenter.inventory.length > 0) {
-        currentCenter.inventory.forEach(item => {
-            const row = document.createElement('tr');
-            const value = item.quantity * item.price;
-            
-            row.innerHTML = `
-                <td>${item.name}</td>
-                <td>${item.quantity}</td>
-                <td>${item.price.toFixed(2)} جنيه</td>
-                <td>${value.toFixed(2)} جنيه</td>
-                <td>${item.note || ''}</td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-    } else {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="5" style="text-align: center;">لا توجد أصناف في المخزون</td>`;
-        tbody.appendChild(row);
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for items table update');
+            return;
+        }
+        
+        const tbody = document.querySelector('#items-table tbody');
+        if (!tbody) {
+            console.warn('Items table body not found');
+            return;
+        }
+        
+        // إظهار مؤشر التحميل
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><div class="loading"></div> جاري تحميل البيانات...</td></tr>';
+        
+        // محاولة تحديث البيانات
+        setTimeout(() => {
+            try {
+                tbody.innerHTML = '';
+                
+                if (validateData(currentCenter.inventory, 'inventory') && currentCenter.inventory.length > 0) {
+                    currentCenter.inventory.forEach(item => {
+                        if (item && item.name) {
+                            const row = document.createElement('tr');
+                            const quantity = item.quantity || 0;
+                            const price = item.price || 0;
+                            const value = quantity * price;
+                            
+                            row.innerHTML = `
+                                <td>${item.name}</td>
+                                <td>${quantity}</td>
+                                <td>${price.toFixed(2)} جنيه</td>
+                                <td>${value.toFixed(2)} جنيه</td>
+                                <td>${item.note || ''}</td>
+                            `;
+                            
+                            tbody.appendChild(row);
+                        }
+                    });
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="5" style="text-align: center;">لا توجد أصناف في المخزون</td>`;
+                    tbody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error updating items table:', error);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">حدث خطأ أثناء تحميل البيانات</td></tr>';
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error in updateItemsTable:', error);
+        showNotification('حدث خطأ أثناء تحديث جدول الأصناف', 'error');
     }
 }
 
 // تحديث جدول المبيعات
 function updateSalesTable() {
-    if (!currentCenter) return;
-    
-    const tbody = document.querySelector('#sales-table tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    if (currentCenter.sales && currentCenter.sales.length > 0) {
-        // ترتيب المبيعات من الأحدث إلى الأقدم
-        const sortedSales = [...currentCenter.sales].sort((a, b) => {
-            return new Date(b.date) - new Date(a.date);
-        });
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for sales table update');
+            return;
+        }
         
-        sortedSales.forEach(sale => {
-            const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td>${new Date(sale.date).toLocaleString('ar-EG')}</td>
-                <td>${sale.itemName}</td>
-                <td>${sale.quantity}</td>
-                <td>${sale.unitPrice ? sale.unitPrice.toFixed(2) : '0.00'} جنيه</td>
-                <td>${sale.totalPrice ? sale.totalPrice.toFixed(2) : '0.00'} جنيه</td>
-                <td>${sale.customerName || ''}</td>
-                <td>${sale.customerPhone || ''}</td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-    } else {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد عمليات بيع</td>`;
-        tbody.appendChild(row);
+        const tbody = document.querySelector('#sales-table tbody');
+        if (!tbody) {
+            console.warn('Sales table body not found');
+            return;
+        }
+        
+        // إظهار مؤشر التحميل
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><div class="loading"></div> جاري تحميل البيانات...</td></tr>';
+        
+        // محاولة تحديث البيانات
+        setTimeout(() => {
+            try {
+                tbody.innerHTML = '';
+                
+                if (validateData(currentCenter.sales, 'sales') && currentCenter.sales.length > 0) {
+                    // ترتيب المبيعات من الأحدث إلى الأقدم
+                    const sortedSales = [...currentCenter.sales]
+                        .filter(sale => sale && sale.date) // تصفية العناصر غير الصالحة
+                        .sort((a, b) => {
+                            try {
+                                return new Date(b.date) - new Date(a.date);
+                            } catch (error) {
+                                console.warn('Error sorting sales by date:', error);
+                                return 0;
+                            }
+                        });
+                    
+                    sortedSales.forEach(sale => {
+                        const row = document.createElement('tr');
+                        
+                        // التعامل مع التاريخ بحذر
+                        let dateStr = 'تاريخ غير محدد';
+                        try {
+                            if (sale.date) {
+                                dateStr = new Date(sale.date).toLocaleString('ar-EG');
+                            }
+                        } catch (error) {
+                            console.warn('Error formatting sale date:', error);
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${dateStr}</td>
+                            <td>${sale.itemName || 'غير محدد'}</td>
+                            <td>${sale.quantity || 0}</td>
+                            <td>${(sale.unitPrice || 0).toFixed(2)} جنيه</td>
+                            <td>${(sale.totalPrice || 0).toFixed(2)} جنيه</td>
+                            <td>${sale.customerName || ''}</td>
+                            <td>${sale.customerPhone || ''}</td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد عمليات بيع</td>`;
+                    tbody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error updating sales table:', error);
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">حدث خطأ أثناء تحميل البيانات</td></tr>';
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error in updateSalesTable:', error);
+        showNotification('حدث خطأ أثناء تحديث جدول المبيعات', 'error');
     }
 }
 
 // تحديث جدول الصيانة
 function updateMaintenanceTable() {
-    if (!currentCenter) return;
-    
-    const tbody = document.querySelector('#maintenance-table tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    if (currentCenter.maintenance && currentCenter.maintenance.length > 0) {
-        // ترتيب طلبات الصيانة من الأحدث إلى الأقدم
-        const sortedMaintenance = [...currentCenter.maintenance].sort((a, b) => {
-            return new Date(b.date) - new Date(a.date);
-        });
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for maintenance table update');
+            return;
+        }
         
-        sortedMaintenance.forEach(maintenance => {
-            const row = document.createElement('tr');
-            
-            // تحديد فئة الحالة
-            let statusClass = '';
-            if (maintenance.status === 'في انتظار قطعة غيار') statusClass = 'status-waiting-part';
-            else if (maintenance.status === 'في انتظار الفني') statusClass = 'status-waiting-technician';
-            else if (maintenance.status === 'تم الصيانة') statusClass = 'status-completed';
-            else if (maintenance.status === 'في انتظار العميل') statusClass = 'status-waiting-customer';
-            
-            row.innerHTML = `
-                <td>${new Date(maintenance.date).toLocaleString('ar-EG')}</td>
-                <td>${maintenance.itemName}</td>
-                <td>${maintenance.quantity}</td>
-                <td>${maintenance.customerName}<br>${maintenance.customerPhone}</td>
-                <td>${maintenance.deviceName}</td>
-                <td>${maintenance.technicianName}</td>
-                <td><span class="maintenance-status ${statusClass}">${maintenance.status}</span></td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-    } else {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد طلبات صيانة</td>`;
-        tbody.appendChild(row);
+        const tbody = document.querySelector('#maintenance-table tbody');
+        if (!tbody) {
+            console.warn('Maintenance table body not found');
+            return;
+        }
+        
+        // إظهار مؤشر التحميل
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><div class="loading"></div> جاري تحميل البيانات...</td></tr>';
+        
+        // محاولة تحديث البيانات
+        setTimeout(() => {
+            try {
+                tbody.innerHTML = '';
+                
+                if (validateData(currentCenter.maintenance, 'maintenance') && currentCenter.maintenance.length > 0) {
+                    // ترتيب طلبات الصيانة من الأحدث إلى الأقدم
+                    const sortedMaintenance = [...currentCenter.maintenance]
+                        .filter(maintenance => maintenance && maintenance.date) // تصفية العناصر غير الصالحة
+                        .sort((a, b) => {
+                            try {
+                                return new Date(b.date) - new Date(a.date);
+                            } catch (error) {
+                                console.warn('Error sorting maintenance by date:', error);
+                                return 0;
+                            }
+                        });
+                    
+                    sortedMaintenance.forEach(maintenance => {
+                        const row = document.createElement('tr');
+                        
+                        // تحديد فئة الحالة
+                        let statusClass = '';
+                        const status = maintenance.status || 'غير محدد';
+                        if (status === 'في انتظار قطعة غيار') statusClass = 'status-waiting-part';
+                        else if (status === 'في انتظار الفني') statusClass = 'status-waiting-technician';
+                        else if (status === 'تم الصيانة') statusClass = 'status-completed';
+                        else if (status === 'في انتظار العميل') statusClass = 'status-waiting-customer';
+                        
+                        // التعامل مع التاريخ بحذر
+                        let dateStr = 'تاريخ غير محدد';
+                        try {
+                            if (maintenance.date) {
+                                dateStr = new Date(maintenance.date).toLocaleString('ar-EG');
+                            }
+                        } catch (error) {
+                            console.warn('Error formatting maintenance date:', error);
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${dateStr}</td>
+                            <td>${maintenance.itemName || 'غير محدد'}</td>
+                            <td>${maintenance.quantity || 0}</td>
+                            <td>${maintenance.customerName || 'غير محدد'}<br>${maintenance.customerPhone || ''}</td>
+                            <td>${maintenance.deviceName || 'غير محدد'}</td>
+                            <td>${maintenance.technicianName || 'غير محدد'}</td>
+                            <td><span class="maintenance-status ${statusClass}">${status}</span></td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد طلبات صيانة</td>`;
+                    tbody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error updating maintenance table:', error);
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">حدث خطأ أثناء تحميل البيانات</td></tr>';
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error in updateMaintenanceTable:', error);
+        showNotification('حدث خطأ أثناء تحديث جدول الصيانة', 'error');
     }
 }
 
 // تحديث الإحصائيات
 function updateInventorySummary() {
-    if (!currentCenter) return;
-    
-    const totalItems = currentCenter.inventory ? currentCenter.inventory.length : 0;
-    const totalQuantity = currentCenter.inventory ? currentCenter.inventory.reduce((sum, item) => sum + item.quantity, 0) : 0;
-    const totalValue = currentCenter.inventory ? currentCenter.inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0) : 0;
-    const totalSales = currentCenter.sales ? currentCenter.sales.length : 0;
-    const totalMaintenance = currentCenter.maintenance ? currentCenter.maintenance.length : 0;
-    const totalSalesValue = currentCenter.sales ? currentCenter.sales.reduce((sum, sale) => sum + (sale.totalPrice || 0), 0) : 0;
-    
-    // تحديث العناصر فقط إذا كانت موجودة في DOM
-    const totalItemsEl = document.getElementById('total-items');
-    const totalQuantityEl = document.getElementById('total-quantity');
-    const totalValueEl = document.getElementById('total-value');
-    const totalSalesEl = document.getElementById('total-sales');
-    const totalMaintenanceEl = document.getElementById('total-maintenance');
-    const totalSalesValueEl = document.getElementById('total-sales-value');
-    
-    if (totalItemsEl) totalItemsEl.textContent = totalItems;
-    if (totalQuantityEl) totalQuantityEl.textContent = totalQuantity;
-    if (totalValueEl) totalValueEl.textContent = totalValue.toFixed(2);
-    if (totalSalesEl) totalSalesEl.textContent = totalSales;
-    if (totalMaintenanceEl) totalMaintenanceEl.textContent = totalMaintenance;
-    if (totalSalesValueEl) totalSalesValueEl.textContent = totalSalesValue.toFixed(2);
+    try {
+        if (!currentCenter) {
+            console.warn('No current center data available for inventory summary update');
+            return;
+        }
+        
+        // حساب الإحصائيات مع التعامل الآمن مع البيانات
+        let totalItems = 0;
+        let totalQuantity = 0;
+        let totalValue = 0;
+        let totalSales = 0;
+        let totalMaintenance = 0;
+        let totalSalesValue = 0;
+        
+        // حساب إحصائيات المخزون
+        if (currentCenter.inventory && Array.isArray(currentCenter.inventory)) {
+            totalItems = currentCenter.inventory.length;
+            totalQuantity = currentCenter.inventory.reduce((sum, item) => {
+                return sum + (typeof item.quantity === 'number' ? item.quantity : 0);
+            }, 0);
+            totalValue = currentCenter.inventory.reduce((sum, item) => {
+                const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+                const price = typeof item.price === 'number' ? item.price : 0;
+                return sum + (quantity * price);
+            }, 0);
+        }
+        
+        // حساب إحصائيات المبيعات
+        if (currentCenter.sales && Array.isArray(currentCenter.sales)) {
+            totalSales = currentCenter.sales.length;
+            totalSalesValue = currentCenter.sales.reduce((sum, sale) => {
+                return sum + (typeof sale.totalPrice === 'number' ? sale.totalPrice : 0);
+            }, 0);
+        }
+        
+        // حساب إحصائيات الصيانة
+        if (currentCenter.maintenance && Array.isArray(currentCenter.maintenance)) {
+            totalMaintenance = currentCenter.maintenance.length;
+        }
+        
+        // تحديث العناصر فقط إذا كانت موجودة في DOM
+        const updates = [
+            { id: 'total-items', value: totalItems },
+            { id: 'total-quantity', value: totalQuantity },
+            { id: 'total-value', value: totalValue.toFixed(2) },
+            { id: 'total-sales', value: totalSales },
+            { id: 'total-maintenance', value: totalMaintenance },
+            { id: 'total-sales-value', value: totalSalesValue.toFixed(2) }
+        ];
+        
+        updates.forEach(update => {
+            const element = document.getElementById(update.id);
+            if (element) {
+                element.textContent = update.value;
+            } else {
+                console.warn(`Summary element ${update.id} not found`);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error updating inventory summary:', error);
+        showNotification('حدث خطأ أثناء تحديث الإحصائيات', 'error');
+    }
 }
 
 // تحديث قوائم اختيار الفنيين
 function updateTechnicianSelects() {
-    const technicianSelect = document.getElementById('technician-select');
-    if (!technicianSelect) return;
-    
-    // مسح القائمة الحالية
-    technicianSelect.innerHTML = '<option value="">-- اختر الفني --</option>';
-    
-    // إضافة الفنيين إلى القائمة
-    if (technicians && technicians.length > 0) {
-        technicians.forEach(tech => {
-            // عرض الفنيين المرتبطين بالمركز الحالي أو الفنيين العامين
-            if (!tech.centerIds || tech.centerIds.includes(currentCenter.id)) {
+    try {
+        const technicianSelect = document.getElementById('technician-select');
+        if (!technicianSelect) {
+            console.warn('Technician select element not found');
+            return;
+        }
+        
+        // مسح القائمة الحالية
+        technicianSelect.innerHTML = '<option value="">-- اختر الفني --</option>';
+        
+        // إضافة الفنيين إلى القائمة
+        if (technicians && Array.isArray(technicians) && technicians.length > 0) {
+            let addedTechnicians = 0;
+            
+            technicians.forEach(tech => {
+                try {
+                    // التحقق من صحة بيانات الفني
+                    if (!tech || !tech.id || !tech.name) {
+                        console.warn('Invalid technician data:', tech);
+                        return;
+                    }
+                    
+                    // عرض الفنيين المرتبطين بالمركز الحالي أو الفنيين العامين
+                    if (!tech.centerIds || !Array.isArray(tech.centerIds) || 
+                        tech.centerIds.length === 0 || 
+                        (currentCenter && tech.centerIds.includes(currentCenter.id))) {
+                        
+                        const option = document.createElement('option');
+                        option.value = tech.id;
+                        option.textContent = `${tech.name} (${tech.phone || 'لا يوجد رقم هاتف'})`;
+                        technicianSelect.appendChild(option);
+                        addedTechnicians++;
+                    }
+                } catch (error) {
+                    console.warn('Error processing technician:', tech, error);
+                }
+            });
+            
+            if (addedTechnicians === 0) {
                 const option = document.createElement('option');
-                option.value = tech.id;
-                option.textContent = tech.name;
+                option.value = '';
+                option.textContent = 'لا يوجد فنيين متاحين لهذا المركز';
+                option.disabled = true;
                 technicianSelect.appendChild(option);
             }
-        });
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'لا يوجد فنيين مسجلين';
+            option.disabled = true;
+            technicianSelect.appendChild(option);
+        }
+        
+    } catch (error) {
+        console.error('Error updating technician selects:', error);
+        showNotification('حدث خطأ أثناء تحديث قائمة الفنيين', 'error');
     }
 }
         // عرض الإشعارات
         function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type} show`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+            try {
+                const notification = document.getElementById('notification');
+                if (!notification) {
+                    console.error('Notification element not found');
+                    return;
+                }
+                notification.textContent = message;
+                notification.className = `notification ${type} show`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            } catch (error) {
+                console.error('Error showing notification:', error);
+            }
+        }
+
+        // إظهار مؤشر التحميل
+        function showLoadingIndicator(elementId) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const originalContent = element.innerHTML;
+                    element.innerHTML = '<div class="loading"></div> جاري التحديث...';
+                    element.setAttribute('data-original-content', originalContent);
+                }
+            } catch (error) {
+                console.error('Error showing loading indicator:', error);
+            }
+        }
+
+        // إخفاء مؤشر التحميل
+        function hideLoadingIndicator(elementId) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element && element.hasAttribute('data-original-content')) {
+                    element.innerHTML = element.getAttribute('data-original-content');
+                    element.removeAttribute('data-original-content');
+                }
+            } catch (error) {
+                console.error('Error hiding loading indicator:', error);
+            }
+        }
+
+        // التحقق من صحة البيانات
+        function validateData(data, type) {
+            try {
+                if (!data) return false;
+                
+                switch (type) {
+                    case 'inventory':
+                        return Array.isArray(data) && data.every(item => 
+                            item.name && typeof item.quantity === 'number' && typeof item.price === 'number'
+                        );
+                    case 'sales':
+                        return Array.isArray(data) && data.every(sale => 
+                            sale.itemName && typeof sale.quantity === 'number' && typeof sale.totalPrice === 'number'
+                        );
+                    case 'maintenance':
+                        return Array.isArray(data) && data.every(maintenance => 
+                            maintenance.itemName && maintenance.customerName && maintenance.status
+                        );
+                    default:
+                        return true;
+                }
+            } catch (error) {
+                console.error('Error validating data:', error);
+                return false;
+            }
         }
         // دوال الحذف (للمسؤول فقط)
         async function deleteItemAdmin(itemId, centerId) {
