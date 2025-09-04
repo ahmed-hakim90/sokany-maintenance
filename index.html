@@ -931,12 +931,25 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
         
-        // بيانات التخزين
+        // بيانات التخزين مع آلية التخزين المؤقت
         let centers = [];
         let technicians = [];
         let currentCenter = null;
         let isAdmin = false;
         const adminPassword = "admin123"; // كلمة مرور المسؤول الافتراضية
+        
+        // آلية التخزين المؤقت لتحسين الأداء
+        let centersCache = {
+            data: null,
+            timestamp: null,
+            expiry: 5 * 60 * 1000 // 5 دقائق
+        };
+        
+        let techniciansCache = {
+            data: null,
+            timestamp: null,
+            expiry: 10 * 60 * 1000 // 10 دقائق
+        };
         
         // أسماء الكولكشن في Firebase
         const CENTERS_COLLECTION = "centers";
@@ -963,15 +976,31 @@
             }
         }
         
-        // تحميل المراكز من Firebase
+        // تحميل المراكز من Firebase مع آلية التخزين المؤقت
         async function loadCentersFromFirebase() {
             try {
+                // التحقق من وجود بيانات مخزنة مؤقتاً وصالحة
+                const now = Date.now();
+                if (centersCache.data && centersCache.timestamp && (now - centersCache.timestamp < centersCache.expiry)) {
+                    centers = centersCache.data;
+                    updateCenterSelects();
+                    updateTechnicianCenterSelect();
+                    return;
+                }
+                
                 showNotification('جاري تحميل البيانات...', 'success');
                 const snapshot = await db.collection(CENTERS_COLLECTION).get();
                 centers = [];
                 snapshot.forEach(doc => {
                     centers.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // تخزين البيانات مؤقتاً
+                centersCache = {
+                    data: [...centers],
+                    timestamp: now,
+                    expiry: centersCache.expiry
+                };
                 
                 // تحديث واجهة المستخدم
                 updateCenterSelects();
@@ -983,14 +1012,30 @@
             }
         }
         
-        // تحميل الفنيين من Firebase
+        // تحميل الفنيين من Firebase مع آلية التخزين المؤقت
         async function loadTechniciansFromFirebase() {
             try {
+                // التحقق من وجود بيانات مخزنة مؤقتاً وصالحة
+                const now = Date.now();
+                if (techniciansCache.data && techniciansCache.timestamp && (now - techniciansCache.timestamp < techniciansCache.expiry)) {
+                    technicians = techniciansCache.data;
+                    updateTechnicianSelects();
+                    updateAllTechniciansTable();
+                    return;
+                }
+                
                 const snapshot = await db.collection(TECHNICIANS_COLLECTION).get();
                 technicians = [];
                 snapshot.forEach(doc => {
                     technicians.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // تخزين البيانات مؤقتاً
+                techniciansCache = {
+                    data: [...technicians],
+                    timestamp: now,
+                    expiry: techniciansCache.expiry
+                };
                 
                 // تحديث واجهة المستخدم
                 updateTechnicianSelects();
@@ -1062,26 +1107,35 @@
             });
         }
         
-        // تحميل بيانات مركز من Firebase
+        // تحميل بيانات مركز من Firebase - محسن للأداء
         async function loadCenterFromFirebase(centerId) {
             try {
-                showNotification('جاري تحميل بيانات المركز...', 'success');
+                showNotification('جاري تسجيل الدخول...', 'success');
+                
+                // جلب بيانات المركز الأساسية فقط أولاً للدخول السريع
                 const doc = await db.collection(CENTERS_COLLECTION).doc(centerId).get();
-                if (doc.exists) {
-                    currentCenter = { id: doc.id, ...doc.data() };
-                    localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
-                    showApp();
-                    showNotification('تم تحميل بيانات المركز بنجاح', 'success');
-                } else {
+                if (!doc.exists) {
                     showNotification('المركز غير موجود', 'error');
+                    return;
                 }
+                
+                // تحديث البيانات الأساسية وعرض التطبيق فوراً
+                currentCenter = { id: doc.id, ...doc.data(), inventory: [], sales: [], maintenance: [] };
+                localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                
+                showApp();
+                showNotification('تم تسجيل الدخول بنجاح', 'success');
+                
+                // تحميل باقي البيانات في الخلفية
+                loadCenterDataInBackground(centerId);
+                
             } catch (error) {
                 console.error('Error loading center:', error);
-                showNotification('حدث خطأ في تحميل بيانات المركز', 'error');
+                showNotification('حدث خطأ في تسجيل الدخول', 'error');
             }
         }
         
-        // تسجيل الدخول
+        // تسجيل الدخول - محسن للأداء
         async function login() {
             const centerSelect = document.getElementById('center-select');
             const emailInput = document.getElementById('email');
@@ -1105,20 +1159,26 @@
                 return;
             }
             
-            // دخول كمسؤول
-            if (centerId === 'admin') {
-                if (password === adminPassword) {
-                    isAdmin = true;
-                    showAdminPanel();
-                    showNotification('تم الدخول كمسؤول', 'success');
-                } else {
-                    showNotification('كلمة مرور المسؤول غير صحيحة', 'error');
-                }
-                return;
-            }
+            // إضافة مؤشر التحميل على زر تسجيل الدخول
+            const loginButton = document.querySelector('button[onclick="login()"]');
+            const originalText = loginButton.innerHTML;
+            loginButton.innerHTML = '<span class="loading"></span> جاري تسجيل الدخول...';
+            loginButton.disabled = true;
             
-            // دخول كمركز عادي
             try {
+                // دخول كمسؤول
+                if (centerId === 'admin') {
+                    if (password === adminPassword) {
+                        isAdmin = true;
+                        showAdminPanel();
+                        showNotification('تم الدخول كمسؤول', 'success');
+                    } else {
+                        showNotification('كلمة مرور المسؤول غير صحيحة', 'error');
+                    }
+                    return;
+                }
+                
+                // دخول كمركز عادي - التحقق من البيانات محلياً أولاً لتسريع العملية
                 const center = centers.find(c => c.id === centerId);
                 if (!center) {
                     showNotification('المركز غير موجود', 'error');
@@ -1130,10 +1190,16 @@
                     return;
                 }
                 
-                loadCenterFromFirebase(center.id);
+                // تحميل بيانات المركز بالطريقة المحسنة
+                await loadCenterFromFirebase(center.id);
+                
             } catch (error) {
                 console.error('Login error:', error);
                 showNotification('حدث خطأ أثناء تسجيل الدخول', 'error');
+            } finally {
+                // إستعادة زر تسجيل الدخول
+                loginButton.innerHTML = originalText;
+                loginButton.disabled = false;
             }
         }
         // تسجيل الخروج
@@ -2119,98 +2185,90 @@ async function exportData(type) {
         //     updateTechnicianSelects();
             
         // }
-        // تحديث البيانات في واجهة المستخدم
+// تحديث البيانات في واجهة المستخدم - محسن للأداء
 function updateUI() {
     if (!currentCenter) return;
     
     // تحديث واجهة المستخدم
     document.getElementById('center-header').textContent = currentCenter.name;
     
-    // تحديث البيانات فقط إذا كانت العناصر موجودة في DOM
-    if (document.getElementById('items-table')) {
-        updateItemSelects();
-        updateItemsTable();
-        updateInventorySummary();
-    }
+    // تحديث البيانات الأساسية فوراً
+    updateInventorySummary();
     
-    if (document.getElementById('sales-table')) {
-        updateSalesTable();
-    }
+    // تحديث باقي العناصر بشكل تدريجي لتجنب التأخير
+    setTimeout(() => {
+        if (document.getElementById('items-table')) {
+            updateItemSelects();
+            updateItemsTable();
+        }
+    }, 100);
     
-    if (document.getElementById('maintenance-table')) {
-        updateMaintenanceTable();
-    }
+    setTimeout(() => {
+        if (document.getElementById('sales-table')) {
+            updateSalesTable();
+        }
+    }, 200);
     
-    if (document.getElementById('technician-select')) {
-        updateTechnicianSelects();
-    }
+    setTimeout(() => {
+        if (document.getElementById('maintenance-table')) {
+            updateMaintenanceTable();
+        }
+    }, 300);
+    
+    setTimeout(() => {
+        if (document.getElementById('technician-select')) {
+            updateTechnicianSelects();
+        }
+    }, 400);
 }
 
-// تحميل بيانات مركز من Firebase
-async function loadCenterFromFirebase(centerId) {
-    try {
-        showNotification('جاري تحميل بيانات المركز...', 'success');
-        
-        // جلب بيانات المركز الأساسية
-        const doc = await db.collection(CENTERS_COLLECTION).doc(centerId).get();
-        if (!doc.exists) {
-            showNotification('المركز غير موجود', 'error');
-            return;
+        // تحميل بيانات المركز في الخلفية بعد تسجيل الدخول
+        async function loadCenterDataInBackground(centerId) {
+            try {
+                showNotification('جاري تحميل بيانات المخزون...', 'success');
+                
+                // استخدام Promise.all لتحميل البيانات بالتوازي بدلاً من التسلسل
+                const [inventorySnapshot, salesSnapshot, maintenanceSnapshot] = await Promise.all([
+                    db.collection(CENTERS_COLLECTION).doc(centerId).collection(INVENTORY_COLLECTION).get(),
+                    db.collection(CENTERS_COLLECTION).doc(centerId).collection(SALES_COLLECTION).orderBy('date', 'desc').limit(100).get(),
+                    db.collection(CENTERS_COLLECTION).doc(centerId).collection(MAINTENANCE_COLLECTION).orderBy('date', 'desc').limit(100).get()
+                ]);
+                
+                // معالجة بيانات المخزون
+                const inventory = [];
+                inventorySnapshot.forEach(doc => {
+                    inventory.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // معالجة بيانات المبيعات (أحدث 100 عملية فقط لتحسين الأداء)
+                const sales = [];
+                salesSnapshot.forEach(doc => {
+                    sales.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // معالجة بيانات الصيانة (أحدث 100 طلب فقط لتحسين الأداء)
+                const maintenance = [];
+                maintenanceSnapshot.forEach(doc => {
+                    maintenance.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // تحديث البيانات المحلية
+                currentCenter.inventory = inventory;
+                currentCenter.sales = sales;
+                currentCenter.maintenance = maintenance;
+                
+                localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
+                
+                // تحديث واجهة المستخدم بشكل تدريجي
+                updateUI();
+                
+                showNotification('تم تحميل جميع البيانات', 'success');
+                
+            } catch (error) {
+                console.error('Error loading center data in background:', error);
+                showNotification('تم تسجيل الدخول ولكن حدث خطأ في تحميل بعض البيانات', 'error');
+            }
         }
-        
-        // جلب بيانات المخزون
-        const inventorySnapshot = await db.collection(CENTERS_COLLECTION)
-            .doc(centerId)
-            .collection(INVENTORY_COLLECTION)
-            .get();
-        
-        const inventory = [];
-        inventorySnapshot.forEach(doc => {
-            inventory.push({ id: doc.id, ...doc.data() });
-        });
-        
-        // جلب بيانات المبيعات
-        const salesSnapshot = await db.collection(CENTERS_COLLECTION)
-            .doc(centerId)
-            .collection(SALES_COLLECTION)
-            .get();
-        
-        const sales = [];
-        salesSnapshot.forEach(doc => {
-            sales.push({ id: doc.id, ...doc.data() });
-        });
-        
-        // جلب بيانات الصيانة
-        const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION)
-            .doc(centerId)
-            .collection(MAINTENANCE_COLLECTION)
-            .get();
-        
-        const maintenance = [];
-        maintenanceSnapshot.forEach(doc => {
-            maintenance.push({ id: doc.id, ...doc.data() });
-        });
-        
-        // تحديث البيانات المحلية
-        currentCenter = { 
-            id: doc.id, 
-            ...doc.data(),
-            inventory: inventory,
-            sales: sales,
-            maintenance: maintenance
-        };
-        
-        localStorage.setItem('currentCenter', JSON.stringify(currentCenter));
-        
-        // تحديث واجهة المستخدم
-        updateUI();
-        
-        showNotification('تم تحميل بيانات المركز بنجاح', 'success');
-    } catch (error) {
-        console.error('Error loading center:', error);
-        showNotification('حدث خطأ في تحميل بيانات المركز', 'error');
-    }
-}
 
 // عرض تطبيق المركز
 function showApp() {
@@ -2283,7 +2341,7 @@ function updateItemsTable() {
     }
 }
 
-// تحديث جدول المبيعات
+// تحديث جدول المبيعات - محسن للأداء
 function updateSalesTable() {
     if (!currentCenter) return;
     
@@ -2293,10 +2351,13 @@ function updateSalesTable() {
     tbody.innerHTML = '';
     
     if (currentCenter.sales && currentCenter.sales.length > 0) {
-        // ترتيب المبيعات من الأحدث إلى الأقدم
-        const sortedSales = [...currentCenter.sales].sort((a, b) => {
-            return new Date(b.date) - new Date(a.date);
-        });
+        // ترتيب المبيعات من الأحدث إلى الأقدم وعرض أول 50 فقط لتحسين الأداء
+        const sortedSales = [...currentCenter.sales]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 50);
+        
+        // استخدام DocumentFragment لتحسين الأداء
+        const fragment = document.createDocumentFragment();
         
         sortedSales.forEach(sale => {
             const row = document.createElement('tr');
@@ -2311,8 +2372,17 @@ function updateSalesTable() {
                 <td>${sale.customerPhone || ''}</td>
             `;
             
-            tbody.appendChild(row);
+            fragment.appendChild(row);
         });
+        
+        tbody.appendChild(fragment);
+        
+        // إضافة رسالة في حالة وجود مبيعات أكثر من 50
+        if (currentCenter.sales.length > 50) {
+            const infoRow = document.createElement('tr');
+            infoRow.innerHTML = `<td colspan="7" style="text-align: center; font-style: italic; color: #666;">عرض أحدث 50 عملية بيع من إجمالي ${currentCenter.sales.length} عملية</td>`;
+            tbody.appendChild(infoRow);
+        }
     } else {
         const row = document.createElement('tr');
         row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد عمليات بيع</td>`;
@@ -2320,7 +2390,7 @@ function updateSalesTable() {
     }
 }
 
-// تحديث جدول الصيانة
+// تحديث جدول الصيانة - محسن للأداء
 function updateMaintenanceTable() {
     if (!currentCenter) return;
     
@@ -2330,10 +2400,13 @@ function updateMaintenanceTable() {
     tbody.innerHTML = '';
     
     if (currentCenter.maintenance && currentCenter.maintenance.length > 0) {
-        // ترتيب طلبات الصيانة من الأحدث إلى الأقدم
-        const sortedMaintenance = [...currentCenter.maintenance].sort((a, b) => {
-            return new Date(b.date) - new Date(a.date);
-        });
+        // ترتيب طلبات الصيانة من الأحدث إلى الأقدم وعرض أول 50 فقط لتحسين الأداء
+        const sortedMaintenance = [...currentCenter.maintenance]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 50);
+        
+        // استخدام DocumentFragment لتحسين الأداء
+        const fragment = document.createDocumentFragment();
         
         sortedMaintenance.forEach(maintenance => {
             const row = document.createElement('tr');
@@ -2355,8 +2428,17 @@ function updateMaintenanceTable() {
                 <td><span class="maintenance-status ${statusClass}">${maintenance.status}</span></td>
             `;
             
-            tbody.appendChild(row);
+            fragment.appendChild(row);
         });
+        
+        tbody.appendChild(fragment);
+        
+        // إضافة رسالة في حالة وجود طلبات صيانة أكثر من 50
+        if (currentCenter.maintenance.length > 50) {
+            const infoRow = document.createElement('tr');
+            infoRow.innerHTML = `<td colspan="7" style="text-align: center; font-style: italic; color: #666;">عرض أحدث 50 طلب صيانة من إجمالي ${currentCenter.maintenance.length} طلب</td>`;
+            tbody.appendChild(infoRow);
+        }
     } else {
         const row = document.createElement('tr');
         row.innerHTML = `<td colspan="7" style="text-align: center;">لا توجد طلبات صيانة</td>`;
