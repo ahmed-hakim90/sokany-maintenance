@@ -349,6 +349,55 @@
             to { transform: rotate(360deg); }
         }
         
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 30px;
+            border: none;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons button {
+            width: auto;
+            padding: 12px 20px;
+        }
+        
         .chart-container {
             width: 100%;
             height: 400px;
@@ -418,6 +467,30 @@
 </head>
 <body>
     <div id="notification" class="notification"></div>
+    
+    <!-- نافذة تعديل المركز -->
+    <div id="edit-center-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditCenterModal()">&times;</span>
+            <h2><i class="fas fa-edit"></i> تعديل بيانات المركز</h2>
+            <div class="form-group">
+                <label for="edit-center-name">اسم المركز:</label>
+                <input type="text" id="edit-center-name" placeholder="أدخل اسم المركز">
+            </div>
+            <div class="form-group">
+                <label for="edit-center-email">البريد الإلكتروني:</label>
+                <input type="email" id="edit-center-email" placeholder="أدخل البريد الإلكتروني">
+            </div>
+            <div class="form-group">
+                <label for="edit-center-password">كلمة مرور جديدة (اختيارية):</label>
+                <input type="password" id="edit-center-password" placeholder="اتركها فارغة للاحتفاظ بالحالية">
+            </div>
+            <div class="modal-buttons">
+                <button onclick="saveEditedCenter()"><i class="fas fa-save"></i> حفظ التعديلات</button>
+                <button onclick="closeEditCenterModal()" class="delete"><i class="fas fa-times"></i> إلغاء</button>
+            </div>
+        </div>
+    </div>
     
     <div id="login-page" class="login-container">
         <h1><i class="fas fa-warehouse"></i> نظام إدارة المخزون متعدد المراكز</h1>
@@ -1027,7 +1100,31 @@
             });
             
             // تحديث جدول المراكز في لوحة المسؤول
-            // updateCentersTable();
+            updateCentersTable();
+        }
+        
+        // تحديث جدول المراكز في لوحة المسؤول
+        function updateCentersTable() {
+            const tbody = document.querySelector('#centers-table tbody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            centers.forEach(center => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${center.name}</td>
+                    <td>${center.email}</td>
+                    <td>••••••••</td>
+                    <td class="action-buttons">
+                        <button class="admin" onclick="editCenter('${center.id}')"><i class="fas fa-edit"></i> تعديل</button>
+                        <button class="delete" onclick="deleteCenter('${center.id}')"><i class="fas fa-trash"></i> حذف</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
         }
         
         // تحديث قائمة المراكز للفنيين
@@ -1349,6 +1446,144 @@ async function logout() {
             } catch (error) {
                 console.error('Error deleting technician:', error);
                 showNotification('حدث خطأ أثناء حذف الفني', 'error');
+            }
+        }
+        
+        // تعديل مركز
+        let currentEditingCenterId = null;
+        
+        async function editCenter(centerId) {
+            const center = centers.find(c => c.id === centerId);
+            if (!center) {
+                showNotification('المركز غير موجود', 'error');
+                return;
+            }
+            
+            currentEditingCenterId = centerId;
+            
+            // ملء البيانات في النموذج
+            document.getElementById('edit-center-name').value = center.name;
+            document.getElementById('edit-center-email').value = center.email;
+            document.getElementById('edit-center-password').value = '';
+            
+            // إظهار النافذة المنبثقة
+            document.getElementById('edit-center-modal').style.display = 'block';
+        }
+        
+        function closeEditCenterModal() {
+            document.getElementById('edit-center-modal').style.display = 'none';
+            currentEditingCenterId = null;
+        }
+        
+        async function saveEditedCenter() {
+            if (!currentEditingCenterId) return;
+            
+            const center = centers.find(c => c.id === currentEditingCenterId);
+            if (!center) {
+                showNotification('المركز غير موجود', 'error');
+                closeEditCenterModal();
+                return;
+            }
+            
+            const newName = document.getElementById('edit-center-name').value.trim();
+            const newEmail = document.getElementById('edit-center-email').value.trim();
+            const newPassword = document.getElementById('edit-center-password').value.trim();
+            
+            if (!newName || !newEmail) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            // التحقق من عدم تكرار اسم المركز
+            if (newName !== center.name && centers.some(c => c.name === newName)) {
+                showNotification('اسم المركز موجود مسبقاً', 'error');
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    name: newName,
+                    email: newEmail
+                };
+                
+                if (newPassword) {
+                    updateData.password = newPassword;
+                }
+                
+                // تحديث المركز في Firestore
+                await db.collection(CENTERS_COLLECTION).doc(currentEditingCenterId).update(updateData);
+                
+                showNotification('تم تحديث بيانات المركز بنجاح', 'success');
+                
+                // إغلاق النافذة المنبثقة
+                closeEditCenterModal();
+                
+                // إعادة تحميل البيانات
+                await loadCentersFromFirebase();
+            } catch (error) {
+                console.error('Error updating center:', error);
+                showNotification('حدث خطأ أثناء تحديث بيانات المركز', 'error');
+            }
+        }
+        
+        // حذف مركز
+        async function deleteCenter(centerId) {
+            const center = centers.find(c => c.id === centerId);
+            if (!center) {
+                showNotification('المركز غير موجود', 'error');
+                return;
+            }
+            
+            const confirmMessage = `هل أنت متأكد من حذف المركز "${center.name}"؟\n\nتحذير: سيتم حذف جميع البيانات المرتبطة بهذا المركز (المخزون، المبيعات، الصيانة) نهائياً ولا يمكن التراجع عن هذا الإجراء.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            try {
+                // حذف جميع البيانات المرتبطة بالمركز
+                const batch = db.batch();
+                
+                // حذف المخزون
+                const inventorySnapshot = await db.collection(CENTERS_COLLECTION)
+                    .doc(centerId)
+                    .collection(INVENTORY_COLLECTION)
+                    .get();
+                inventorySnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                // حذف المبيعات
+                const salesSnapshot = await db.collection(CENTERS_COLLECTION)
+                    .doc(centerId)
+                    .collection(SALES_COLLECTION)
+                    .get();
+                salesSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                // حذف الصيانة
+                const maintenanceSnapshot = await db.collection(CENTERS_COLLECTION)
+                    .doc(centerId)
+                    .collection(MAINTENANCE_COLLECTION)
+                    .get();
+                maintenanceSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                // حذف المركز نفسه
+                batch.delete(db.collection(CENTERS_COLLECTION).doc(centerId));
+                
+                // تنفيذ العملية
+                await batch.commit();
+                
+                showNotification('تم حذف المركز وجميع بياناته بنجاح', 'success');
+                
+                // إعادة تحميل البيانات
+                await loadCentersFromFirebase();
+            } catch (error) {
+                console.error('Error deleting center:', error);
+                showNotification('حدث خطأ أثناء حذف المركز', 'error');
             }
         }
         
@@ -2503,6 +2738,20 @@ function updateTechnicianSelects() {
             const centerId = this.value;
             if (centerId) {
                 loadCenterDataForAdmin(centerId);
+            }
+        });
+        
+        // إضافة أحداث لوحة المفاتيح والماوس للنافذة المنبثقة
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeEditCenterModal();
+            }
+        });
+        
+        // إغلاق النافذة المنبثقة عند النقر خارجها
+        document.getElementById('edit-center-modal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEditCenterModal();
             }
         });
     </script>
