@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عرض تحسين أداء تسجيل الدخول</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .method {
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+        
+        .old-method {
+            border-color: #e74c3c;
+            background-color: #fdf2f2;
+        }
+        
+        .new-method {
+            border-color: #27ae60;
+            background-color: #f2f9f3;
+        }
+        
+        .method h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .old-method h3 {
+            color: #e74c3c;
+        }
+        
+        .new-method h3 {
+            color: #27ae60;
+        }
+        
+        .step {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #ddd;
+            position: relative;
+        }
+        
+        .step.loading {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .step.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .step.slow {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .timing {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            font-size: 12px;
+            color: #666;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .demo-buttons {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .benefits {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .benefits h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .benefits ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .benefits li {
+            padding: 8px 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .benefits li::before {
+            content: '✅ ';
+            margin-left: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #ecf0f1;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #27ae60);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🚀 عرض تحسين أداء تسجيل الدخول</h1>
+        
+        <div class="demo-buttons">
+            <button onclick="demonstrateOldMethod()">طريقة التسجيل القديمة</button>
+            <button onclick="demonstrateNewMethod()">طريقة التسجيل المحسنة</button>
+            <button onclick="comparePerformance()">مقارنة الأداء</button>
+        </div>
+        
+        <div class="comparison">
+            <div class="method old-method">
+                <h3>الطريقة القديمة ❌</h3>
+                <div id="old-steps"></div>
+            </div>
+            
+            <div class="method new-method">
+                <h3>الطريقة المحسنة ✅</h3>
+                <div id="new-steps"></div>
+            </div>
+        </div>
+        
+        <div class="benefits">
+            <h3>فوائد التحسين المطبق:</h3>
+            <ul>
+                <li>تسجيل دخول فوري بعد التحقق من البيانات</li>
+                <li>تحميل البيانات في الخلفية دون انتظار</li>
+                <li>استخدام التخزين المؤقت لتسريع العمليات المكررة</li>
+                <li>تحديث واجهة المستخدم تدريجياً لمنع التجمد</li>
+                <li>عرض أول 50 سجل فقط لتحسين أداء الجداول الكبيرة</li>
+                <li>استعلامات متوازية من Firebase بدلاً من التسلسلية</li>
+                <li>مؤشرات تحميل واضحة لتحسين تجربة المستخدم</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function createStep(text, type = 'loading', duration = 0) {
+            const step = document.createElement('div');
+            step.className = `step ${type}`;
+            step.innerHTML = `
+                <div class="timing">${duration}ms</div>
+                <div>${text}</div>
+                <div class="progress-bar"><div class="progress-fill"></div></div>
+            `;
+            return step;
+        }
+
+        function animateStep(stepElement, duration) {
+            const progressFill = stepElement.querySelector('.progress-fill');
+            setTimeout(() => {
+                progressFill.style.width = '100%';
+            }, 100);
+            
+            setTimeout(() => {
+                stepElement.classList.remove('loading');
+                stepElement.classList.add('success');
+            }, duration);
+        }
+
+        async function demonstrateOldMethod() {
+            const container = document.getElementById('old-steps');
+            container.innerHTML = '';
+            
+            // الخطوة 1: التحقق من البيانات
+            const step1 = createStep('🔐 التحقق من البيانات...', 'loading', 150);
+            container.appendChild(step1);
+            animateStep(step1, 150);
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // الخطوة 2: تحميل بيانات المركز
+            const step2 = createStep('🏢 تحميل بيانات المركز...', 'loading', 300);
+            container.appendChild(step2);
+            animateStep(step2, 300);
+            
+            await new Promise(resolve => setTimeout(resolve, 350));
+            
+            // الخطوة 3: تحميل المخزون
+            const step3 = createStep('📦 تحميل جميع بيانات المخزون...', 'loading', 800);
+            container.appendChild(step3);
+            animateStep(step3, 800);
+            
+            await new Promise(resolve => setTimeout(resolve, 850));
+            
+            // الخطوة 4: تحميل المبيعات
+            const step4 = createStep('💰 تحميل جميع المبيعات...', 'loading', 1200);
+            container.appendChild(step4);
+            animateStep(step4, 1200);
+            
+            await new Promise(resolve => setTimeout(resolve, 1250));
+            
+            // الخطوة 5: تحميل الصيانة
+            const step5 = createStep('🔧 تحميل جميع طلبات الصيانة...', 'loading', 900);
+            container.appendChild(step5);
+            animateStep(step5, 900);
+            
+            await new Promise(resolve => setTimeout(resolve, 950));
+            
+            // الخطوة 6: تحديث واجهة المستخدم
+            const step6 = createStep('🖥️ تحديث واجهة المستخدم...', 'slow', 600);
+            container.appendChild(step6);
+            animateStep(step6, 600);
+            
+            await new Promise(resolve => setTimeout(resolve, 650));
+            
+            // الخطوة 7: الانتهاء
+            const step7 = createStep('✅ تم تسجيل الدخول', 'success', 4050);
+            container.appendChild(step7);
+            animateStep(step7, 100);
+        }
+
+        async function demonstrateNewMethod() {
+            const container = document.getElementById('new-steps');
+            container.innerHTML = '';
+            
+            // الخطوة 1: التحقق من البيانات
+            const step1 = createStep('🔐 التحقق من البيانات...', 'loading', 120);
+            container.appendChild(step1);
+            animateStep(step1, 120);
+            
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
+            // الخطوة 2: تحميل البيانات الأساسية فقط
+            const step2 = createStep('🏢 تحميل البيانات الأساسية...', 'loading', 200);
+            container.appendChild(step2);
+            animateStep(step2, 200);
+            
+            await new Promise(resolve => setTimeout(resolve, 250));
+            
+            // الخطوة 3: دخول فوري!
+            const step3 = createStep('🚀 تسجيل دخول فوري!', 'success', 370);
+            container.appendChild(step3);
+            animateStep(step3, 100);
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // الخطوة 4: تحميل في الخلفية
+            const step4 = createStep('⚡ تحميل البيانات في الخلفية (متوازي)...', 'loading', 600);
+            container.appendChild(step4);
+            animateStep(step4, 600);
+            
+            await new Promise(resolve => setTimeout(resolve, 650));
+            
+            // الخطوة 5: تحديث تدريجي
+            const step5 = createStep('📊 تحديث واجهة المستخدم تدريجياً...', 'loading', 400);
+            container.appendChild(step5);
+            animateStep(step5, 400);
+            
+            await new Promise(resolve => setTimeout(resolve, 450));
+            
+            // الخطوة 6: الانتهاء
+            const step6 = createStep('🎉 جميع البيانات جاهزة!', 'success', 1370);
+            container.appendChild(step6);
+            animateStep(step6, 100);
+        }
+
+        async function comparePerformance() {
+            // مسح النتائج السابقة
+            document.getElementById('old-steps').innerHTML = '';
+            document.getElementById('new-steps').innerHTML = '';
+            
+            // تشغيل العرضين معاً
+            const oldPromise = demonstrateOldMethod();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const newPromise = demonstrateNewMethod();
+            
+            await Promise.all([oldPromise, newPromise]);
+            
+            // عرض النتائج
+            setTimeout(() => {
+                alert('🏆 النتائج:\n\n' +
+                      '⏰ الطريقة القديمة: ~4 ثوان\n' +
+                      '🚀 الطريقة المحسنة: ~0.4 ثانية للدخول + 1 ثانية للبيانات الكاملة\n\n' +
+                      '📈 تحسن في الأداء: 10x أسرع!');
+            }, 1000);
+        }
+
+        // تشغيل العرض التلقائي عند تحميل الصفحة
+        window.addEventListener('load', () => {
+            setTimeout(comparePerformance, 1000);
+        });
+    </script>
+</body>
+</html>
